@@ -51,6 +51,7 @@ export interface Lead {
   repeat_count: number;
   linked_customer_id?: number;
   is_duplicate: boolean;
+  remark?: string;
   next_followup_at?: string;
   last_followup_at?: string;
   followup_count: number;
