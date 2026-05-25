@@ -102,6 +102,8 @@ export const leadsAPI = {
     api.post(`/leads/${id}/notes`, data),
   addCallLog: (id: number, data: Record<string, unknown>) =>
     api.post(`/leads/${id}/call-log`, data),
+  bulkAssign: (data: { ids: number[]; assigned_to: number }) =>
+    api.patch('/leads/bulk-assign', data),
 };
 
 // ── FOLLOW-UPS ────────────────────────────────────────────────────────
