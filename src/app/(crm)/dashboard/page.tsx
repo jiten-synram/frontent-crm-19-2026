@@ -75,7 +75,7 @@ export default function DashboardPage() {
         <StatCard label="In Process"     value={cards.in_process || 0}  icon="⚙️" color="blue"   trend={5}  onClick={() => router.push('/leads?status=in_process')} />
         <StatCard label="Follow-ups"     value={cards.follow_up || 0}   icon="📅" color="purple" sub={overdue > 0 ? `${overdue} overdue` : undefined} onClick={() => router.push('/follow-ups')} />
         <StatCard label="Converted"      value={cards.converted || 0}   icon="🎯" color="green"  trend={18} onClick={() => router.push('/leads?status=converted')} />
-        <StatCard label="Customers"      value={data?.customers || 0}   icon="🤝" color="green"  onClick={() => router.push('/customers')} />
+        <StatCard label="Customers"      value={cards?.customers || 0}   icon="🤝" color="green"  onClick={() => router.push('/customers')} />
       </div>
 
       {/* Charts row */}
