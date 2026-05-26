@@ -7,7 +7,6 @@ export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
 }
 
-// ── Date formatters ──────────────────────────────────────────────
 export function fmtDate(d: string | Date | undefined | null): string {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -32,12 +31,11 @@ export function fmtRelative(d: string | Date): string {
   return fmtDate(d);
 }
 
-// ── Currency formatter ───────────────────────────────────────────
 export function fmtCurrency(n: number | undefined | null): string {
   if (n == null) return '—';
   if (n >= 10000000) return `₹${(n / 10000000).toFixed(1)}Cr`;
-  if (n >= 100000) return `₹${(n / 100000).toFixed(1)}L`;
-  if (n >= 1000) return `₹${(n / 1000).toFixed(1)}k`;
+  if (n >= 100000)   return `₹${(n / 100000).toFixed(1)}L`;
+  if (n >= 1000)     return `₹${(n / 1000).toFixed(1)}k`;
   return `₹${n.toLocaleString('en-IN')}`;
 }
 
@@ -46,7 +44,6 @@ export function fmtINR(n: number | undefined | null): string {
   return '₹' + Number(n).toLocaleString('en-IN');
 }
 
-// ── Duration formatter ───────────────────────────────────────────
 export function fmtDuration(seconds: number): string {
   if (!seconds) return '—';
   const m = Math.floor(seconds / 60);
@@ -55,6 +52,11 @@ export function fmtDuration(seconds: number): string {
 }
 
 // ── Status config ────────────────────────────────────────────────
+// CHANGES:
+// - closed_lost → dead (label "Dead")
+// - cnr added (Call Not Reachable)
+// - cancelled added
+// - delivered stays (shown via toggle / pipeline only)
 export const STATUS_CONFIG: Record<LeadStatus, {
   label: string;
   badgeClass: string;
@@ -62,13 +64,25 @@ export const STATUS_CONFIG: Record<LeadStatus, {
   bg: string;
   dot: string;
 }> = {
-  new:         { label: 'New',         badgeClass: 'badge-new',        color: '#1447c0', bg: '#EFF6FF', dot: '#3b82f6' },
-  in_process:  { label: 'In Process',  badgeClass: 'badge-in_process', color: '#92400e', bg: '#FEF3C7', dot: '#f59e0b' },
-  follow_up:   { label: 'Follow-up',   badgeClass: 'badge-follow_up',  color: '#5b21b6', bg: '#F3E8FF', dot: '#8b5cf6' },
-  converted:   { label: 'Converted',   badgeClass: 'badge-converted',  color: '#166534', bg: '#F0FDF4', dot: '#22c55e' },
-  delivered:   { label: 'Delivered',   badgeClass: 'badge-delivered',  color: '#065f46', bg: '#ECFDF5', dot: '#10b981' },
-  closed_lost: { label: 'Closed Lost', badgeClass: 'badge-closed_lost',color: '#991b1b', bg: '#FEF2F2', dot: '#ef4444' },
+  new:       { label: 'New',        badgeClass: 'badge-new',       color: '#1447c0', bg: '#EFF6FF', dot: '#3b82f6' },
+  in_process:{ label: 'In Process', badgeClass: 'badge-in_process',color: '#92400e', bg: '#FEF3C7', dot: '#f59e0b' },
+  follow_up: { label: 'Follow-up',  badgeClass: 'badge-follow_up', color: '#5b21b6', bg: '#F3E8FF', dot: '#8b5cf6' },
+  cnr:       { label: 'CNR',        badgeClass: 'badge-cnr',       color: '#0e7490', bg: '#ECFEFF', dot: '#06b6d4' },
+  converted: { label: 'Converted',  badgeClass: 'badge-converted', color: '#166534', bg: '#F0FDF4', dot: '#22c55e' },
+  delivered: { label: 'Delivered',  badgeClass: 'badge-delivered', color: '#065f46', bg: '#ECFDF5', dot: '#10b981' },
+  cancelled: { label: 'Cancelled',  badgeClass: 'badge-cancelled', color: '#9a3412', bg: '#FFF7ED', dot: '#f97316' },
+  dead:      { label: 'Dead',       badgeClass: 'badge-dead',      color: '#991b1b', bg: '#FEF2F2', dot: '#ef4444' },
 };
+
+// ── ALL_STATUSES — Leads page filter chips (delivered/cancelled nahi — pipeline se aayenge)
+export const ALL_STATUSES: LeadStatus[] = [
+  'new', 'in_process', 'follow_up', 'cnr', 'converted', 'dead',
+];
+
+// ── PIPELINE_STATUSES — Pipeline page mein sirf ye 3 columns
+export const PIPELINE_STATUSES: LeadStatus[] = [
+  'converted', 'delivered', 'cancelled',
+];
 
 // ── Source config ────────────────────────────────────────────────
 export const SOURCE_CONFIG: Record<LeadSource, { label: string; badgeClass: string }> = {
@@ -81,7 +95,6 @@ export const SOURCE_CONFIG: Record<LeadSource, { label: string; badgeClass: stri
   campaign:  { label: 'Campaign',  badgeClass: 'src-campaign' },
 };
 
-// ── CRM constants ────────────────────────────────────────────────
 export const CATEGORIES = [
   'Kidney Stone Treatment', 'Gall Stone Treatment', 'UTI Treatment',
   'CKD Treatment', 'Thyroid Treatment', 'Piles Treatment',
@@ -100,11 +113,7 @@ export const SOURCES: LeadSource[] = [
   'call', 'whatsapp', 'meta_ads', 'referral', 'website', 'campaign', 'shopify',
 ];
 
-export const ALL_STATUSES: LeadStatus[] = [
-  'new', 'in_process', 'follow_up', 'converted', 'delivered', 'closed_lost',
-];
-
-// ── Avatar colour by index ───────────────────────────────────────
+// Avatar helpers
 const AVATAR_COLORS = [
   '#162B20', '#1E5038', '#2A6B4A', '#D06300', '#7C3AED',
   '#1447c0', '#991b1b', '#065f46', '#92400e', '#1e3a5f',
@@ -122,17 +131,14 @@ export function avatarInitials(name: string): string {
     : name.slice(0, 2).toUpperCase();
 }
 
-// ── Status badge component helper ───────────────────────────────
 export function getStatusBadgeClass(status: string): string {
   return `badge badge-${status}`;
 }
 
-// ── Phone normaliser ─────────────────────────────────────────────
 export function normalisePhone(phone: string): string {
   return phone.replace(/\D/g, '').slice(-10);
 }
 
-// ── Pagination helper ────────────────────────────────────────────
 export function buildPageNumbers(current: number, total: number): (number | '...')[] {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
   const pages: (number | '...')[] = [1];
@@ -143,7 +149,6 @@ export function buildPageNumbers(current: number, total: number): (number | '...
   return pages;
 }
 
-// ── Export CSV helper ────────────────────────────────────────────
 export function downloadCSV(data: Record<string, unknown>[], filename: string): void {
   if (!data.length) return;
   const headers = Object.keys(data[0]);
