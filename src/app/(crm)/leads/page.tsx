@@ -29,6 +29,17 @@ const DATE_SHORTCUTS = [
   { label: 'This Month',  start: startOfMonth(), end: today() },
 ];
 
+// Leads page mein sirf yahi statuses dikhenge filter chips mein
+// delivered aur cancelled pipeline se aayenge — directly select nahi hoga
+const LEADS_PAGE_STATUSES: LeadStatus[] = [
+  'new',
+  'in_process',
+  'follow_up',
+  'cnr',
+  'converted',
+  'dead',
+];
+
 // ── Remark Cell — inline auto-save input ─────────────────────────
 function RemarkCell({ lead, onSaved }: { lead: Lead; onSaved: (id: number, val: string) => void }) {
   const [value,  setValue]  = useState(lead.remark || '');
@@ -36,7 +47,6 @@ function RemarkCell({ lead, onSaved }: { lead: Lead; onSaved: (id: number, val: 
   const [saved,  setSaved]  = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Sync when lead prop changes (e.g. after full reload)
   useEffect(() => { setValue(lead.remark || ''); }, [lead.remark]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -48,7 +58,7 @@ function RemarkCell({ lead, onSaved }: { lead: Lead; onSaved: (id: number, val: 
       setSaving(true);
       try {
         await leadsAPI.update(lead.id, { remark: v });
-        onSaved(lead.id, v);          // update parent state silently (no full reload)
+        onSaved(lead.id, v);
         setSaved(true);
         setTimeout(() => setSaved(false), 1800);
       } catch { toast.error('Remark save failed'); }
@@ -67,13 +77,11 @@ function RemarkCell({ lead, onSaved }: { lead: Lead; onSaved: (id: number, val: 
                    focus:outline-none focus:border-forest-DEFAULT focus:ring-1
                    focus:ring-forest-DEFAULT/20 placeholder:text-gray-300 transition-all pr-6"
       />
-      {/* Saving spinner */}
       {saving && (
         <span className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3
                          border-2 border-forest-DEFAULT border-t-transparent
                          rounded-full animate-spin" />
       )}
-      {/* Saved tick */}
       {!saving && saved && (
         <span className="absolute right-2 top-1/2 -translate-y-1/2 text-forest-DEFAULT text-[11px] font-bold">✓</span>
       )}
@@ -85,29 +93,31 @@ function RemarkCell({ lead, onSaved }: { lead: Lead; onSaved: (id: number, val: 
 export default function LeadsPage() {
   const router       = useRouter();
   const searchParams = useSearchParams();
-  const { isAdmin, user } = useAuthStore();
+  const { isAdmin }  = useAuthStore();
 
-  const [leads,      setLeads]      = useState<Lead[]>([]);
-  const [total,      setTotal]      = useState(0);
-  const [page,       setPage]       = useState(1);
-  const [loading,    setLoading]    = useState(true);
-  const [search,     setSearch]     = useState(searchParams.get('search') || '');
-  const [status,     setStatus]     = useState<string>(searchParams.get('status') || '');
-  const [source,     setSource]     = useState<string>('');
-  const [category,   setCategory]   = useState<string>('');
-  const [assignedTo, setAssignedTo] = useState<string>('');
-  const [startDate,  setStartDate]  = useState<string>('');
-  const [endDate,    setEndDate]    = useState<string>('');
-  const [users,      setUsers]      = useState<any[]>([]);
-  const [selected,   setSelected]   = useState<Set<number>>(new Set());
-  const [exporting,  setExporting]  = useState(false);
+  const [leads,         setLeads]         = useState<Lead[]>([]);
+  const [total,         setTotal]         = useState(0);
+  const [page,          setPage]          = useState(1);
+  const [loading,       setLoading]       = useState(true);
+  const [search,        setSearch]        = useState(searchParams.get('search') || '');
+  const [status,        setStatus]        = useState<string>(searchParams.get('status') || '');
+  const [source,        setSource]        = useState<string>('');
+  const [category,      setCategory]      = useState<string>('');
+  const [assignedTo,    setAssignedTo]    = useState<string>('');
+  const [startDate,     setStartDate]     = useState<string>('');
+  const [endDate,       setEndDate]       = useState<string>('');
+  const [users,         setUsers]         = useState<any[]>([]);
+  const [selected,      setSelected]      = useState<Set<number>>(new Set());
+  const [exporting,     setExporting]     = useState(false);
+
+  // ── Show Delivered toggle — default: OFF ──────────────────────
+  const [showDelivered, setShowDelivered] = useState(false);
 
   const [showNew,    setShowNew]    = useState(searchParams.get('action') === 'new');
   const [statusLead, setStatusLead] = useState<Lead | null>(null);
 
   const LIMIT = 25;
 
-  // Load sales users for admin filter
   useEffect(() => {
     if (isAdmin()) {
       authAPI.getUsers({ role: 'sales', is_active: 'true' })
@@ -116,25 +126,38 @@ export default function LeadsPage() {
     }
   }, []);
 
-  // Load leads
   const load = useCallback(async () => {
     setLoading(true);
     setSelected(new Set());
     try {
       const params: Record<string, unknown> = { page, limit: LIMIT };
       if (search)     params.search      = search;
-      if (status)     params.status      = status;
       if (source)     params.source      = source;
       if (category)   params.category    = category;
       if (assignedTo) params.assigned_to = assignedTo;
       if (startDate)  params.start_date  = startDate;
       if (endDate)    params.end_date    = endDate;
+
+      // Status logic:
+      // - Koi status chip select kiya → wahi bhejo
+      // - showDelivered ON hai aur koi chip select nahi → delivered bhejo
+      // - Default → delivered ko exclude karo (backend ko batao)
+      if (status) {
+        params.status = status;
+      } else if (showDelivered) {
+        params.status = 'delivered';
+      } else {
+        // Delivered aur cancelled hide karo by default
+        // Backend ko exclude_statuses parameter bhejo
+        params.exclude_statuses = 'delivered,cancelled';
+      }
+
       const res: any = await leadsAPI.list(params);
       setLeads(res?.leads || []);
       setTotal(res?.total || 0);
     } catch { toast.error('Failed to load leads'); }
     finally  { setLoading(false); }
-  }, [page, search, status, source, category, assignedTo, startDate, endDate]);
+  }, [page, search, status, source, category, assignedTo, startDate, endDate, showDelivered]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -143,7 +166,13 @@ export default function LeadsPage() {
     return () => clearTimeout(t);
   }, [search]);
 
-  // Silent remark update — no full reload needed
+  // Toggle karne par status chip reset karo
+  const handleDeliveredToggle = () => {
+    setShowDelivered(prev => !prev);
+    setStatus('');
+    setPage(1);
+  };
+
   const handleRemarkSaved = (id: number, val: string) => {
     setLeads(prev => prev.map(l => l.id === id ? { ...l, remark: val } : l));
   };
@@ -155,10 +184,9 @@ export default function LeadsPage() {
   const clearFilters = () => {
     setStatus(''); setSource(''); setCategory('');
     setAssignedTo(''); setStartDate(''); setEndDate('');
-    setSearch(''); setPage(1);
+    setSearch(''); setShowDelivered(false); setPage(1);
   };
 
-  // Bulk select
   const toggleSelect = (id: number) => {
     setSelected(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
   };
@@ -166,7 +194,6 @@ export default function LeadsPage() {
     selected.size === leads.length ? setSelected(new Set()) : setSelected(new Set(leads.map(l => l.id)));
   };
 
-  // Bulk export
   const bulkExport = async (format: 'excel' | 'csv') => {
     if (selected.size === 0) { toast.error('Koi lead select nahi kiya!'); return; }
     setExporting(true);
@@ -185,11 +212,11 @@ export default function LeadsPage() {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) throw new Error();
-      const blob  = await res.blob();
-      const url   = URL.createObjectURL(blob);
-      const a     = document.createElement('a');
-      a.href      = url;
-      a.download  = `leads-${Date.now()}.${format === 'csv' ? 'csv' : 'xlsx'}`;
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `leads-${Date.now()}.${format === 'csv' ? 'csv' : 'xlsx'}`;
       a.click();
       URL.revokeObjectURL(url);
       toast.success(`${selected.size} leads exported!`);
@@ -198,7 +225,7 @@ export default function LeadsPage() {
   };
 
   const pages      = Math.ceil(total / LIMIT);
-  const hasFilters = status || source || category || assignedTo || startDate || endDate || search;
+  const hasFilters = status || source || category || assignedTo || startDate || endDate || search || showDelivered;
 
   return (
     <div>
@@ -209,6 +236,7 @@ export default function LeadsPage() {
           <p className="text-xs text-gray-500 mt-0.5">
             {total} lead{total !== 1 ? 's' : ''}
             {status ? ` · ${STATUS_CONFIG[status as LeadStatus]?.label}` : ''}
+            {showDelivered && !status ? ' · Delivered' : ''}
             {assignedTo && users.length > 0
               ? ` · ${users.find(u => String(u.id) === assignedTo)?.name || ''}`
               : ''}
@@ -261,20 +289,41 @@ export default function LeadsPage() {
               placeholder="Search name, phone, email…" className="max-w-xs text-xs"
             />
             <div className="flex gap-1 flex-wrap">
-              <button onClick={() => { setStatus(''); setPage(1); }}
+
+              {/* All chip */}
+              <button
+                onClick={() => { setStatus(''); setShowDelivered(false); setPage(1); }}
                 className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all
-                  ${!status ? 'border-forest-DEFAULT bg-green-50 text-forest-DEFAULT'
-                            : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+                  ${!status && !showDelivered
+                    ? 'border-forest-DEFAULT bg-green-50 text-forest-DEFAULT'
+                    : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
                 All
               </button>
-              {ALL_STATUSES.map((s) => (
-                <button key={s} onClick={() => { setStatus(s); setPage(1); }}
+
+              {/* Normal status chips — delivered/cancelled nahi */}
+              {LEADS_PAGE_STATUSES.map((s) => (
+                <button key={s}
+                  onClick={() => { setStatus(s); setShowDelivered(false); setPage(1); }}
                   className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all
-                    ${status === s ? 'border-forest-DEFAULT bg-green-50 text-forest-DEFAULT'
-                                   : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
-                  {STATUS_CONFIG[s].label}
+                    ${status === s
+                      ? 'border-forest-DEFAULT bg-green-50 text-forest-DEFAULT'
+                      : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+                  {STATUS_CONFIG[s as LeadStatus]?.label || s}
                 </button>
               ))}
+
+              {/* ── Show Delivered toggle — admin + sales dono ke liye ── */}
+              <button
+                onClick={handleDeliveredToggle}
+                className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all flex items-center gap-1.5
+                  ${showDelivered
+                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                    : 'border-dashed border-gray-300 text-gray-400 hover:border-emerald-400 hover:text-emerald-600'}`}>
+                <span className={`inline-block w-3.5 h-3.5 rounded-full border-2 transition-colors flex-shrink-0
+                  ${showDelivered ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300'}`} />
+                {showDelivered ? '✓ Delivered' : 'Show Delivered'}
+              </button>
+
             </div>
           </div>
 
@@ -332,6 +381,20 @@ export default function LeadsPage() {
               </span>
             </div>
           )}
+
+          {/* Delivered view banner */}
+          {showDelivered && (
+            <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 flex items-center justify-between">
+              <span className="text-xs text-emerald-700 font-semibold">
+                📦 Delivered leads dikh rahe hain — Pipeline se aaye hain
+              </span>
+              <button
+                onClick={handleDeliveredToggle}
+                className="text-xs text-emerald-600 hover:text-emerald-800 font-medium">
+                Hide ✕
+              </button>
+            </div>
+          )}
         </div>
 
         {/* ── Table ── */}
@@ -340,8 +403,16 @@ export default function LeadsPage() {
             {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-12 rounded" />)}
           </div>
         ) : leads.length === 0 ? (
-          <Empty icon="🔍" title="No leads found" description="Try adjusting your filters or create a new lead"
-            action={<button className="btn btn-amber text-xs" onClick={() => setShowNew(true)}>+ Add Lead</button>} />
+          <Empty
+            icon={showDelivered ? '📦' : '🔍'}
+            title={showDelivered ? 'Koi delivered lead nahi' : 'No leads found'}
+            description={showDelivered
+              ? 'Pipeline mein lead ko Converted → Delivered karo'
+              : 'Try adjusting your filters or create a new lead'}
+            action={!showDelivered
+              ? <button className="btn btn-amber text-xs" onClick={() => setShowNew(true)}>+ Add Lead</button>
+              : undefined}
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="data-table">
@@ -372,7 +443,6 @@ export default function LeadsPage() {
                     className={selected.has(lead.id) ? 'bg-green-50' : ''}
                     onClick={() => router.push(`/leads/${lead.id}`)}
                   >
-                    {/* Checkbox */}
                     <td onClick={(e) => e.stopPropagation()}>
                       <input type="checkbox"
                         checked={selected.has(lead.id)}
@@ -381,15 +451,14 @@ export default function LeadsPage() {
                       />
                     </td>
 
-                    {/* Name + phone */}
                     <td>
                       <div className="font-semibold text-gray-900 text-sm">
                         {lead.name}
-                        {lead.is_repeat && (
+                        {/* {lead.is_repeat && (
                           <span className="ml-1.5 text-[9px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-full font-bold">
                             ⟳ Repeat
                           </span>
-                        )}
+                        )} */}
                       </div>
                       <div className="text-xs text-gray-500">{lead.phone}</div>
                     </td>
@@ -398,7 +467,6 @@ export default function LeadsPage() {
                     <td><SourceBadge source={lead.source} /></td>
                     <td><StatusBadge status={lead.status} /></td>
 
-                    {/* Assigned */}
                     <td>
                       <div className="flex items-center gap-1.5">
                         {lead.assigned_name && <Avatar name={lead.assigned_name} size={22} />}
@@ -406,28 +474,27 @@ export default function LeadsPage() {
                       </div>
                     </td>
 
-                    {/* Amount */}
                     <td className={`text-sm font-semibold ${lead.order_amount ? 'text-forest-DEFAULT' : 'text-gray-300'}`}>
                       {lead.order_amount ? fmtINR(lead.order_amount) : '—'}
                     </td>
 
-                    {/* Created date */}
                     <td className="text-xs text-gray-400">
                       {lead.created_at ? fmtDate(lead.created_at) : '—'}
                     </td>
 
-                    {/* ── Remark column ── */}
                     <td onClick={(e) => e.stopPropagation()}>
                       <RemarkCell lead={lead} onSaved={handleRemarkSaved} />
                     </td>
 
-                    {/* Actions */}
+                    {/* Actions — delivered leads ke liye Status button nahi */}
                     <td onClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-1">
-                        <button className="btn btn-outline btn-xs"
-                          onClick={(e) => { e.stopPropagation(); setStatusLead(lead); }}>
-                          Status
-                        </button>
+                        {lead.status !== 'delivered' && lead.status !== 'cancelled' && (
+                          <button className="btn btn-outline btn-xs"
+                            onClick={(e) => { e.stopPropagation(); setStatusLead(lead); }}>
+                            Status
+                          </button>
+                        )}
                         {isAdmin() && (
                           <button className="btn btn-ghost btn-xs"
                             onClick={(e) => { e.stopPropagation(); router.push(`/leads/${lead.id}#assign`); }}>
@@ -443,13 +510,11 @@ export default function LeadsPage() {
           </div>
         )}
 
-        {/* Pagination */}
         {!loading && pages > 1 && (
           <Pagination page={page} pages={pages} total={total} limit={LIMIT} onChange={(p) => setPage(p)} />
         )}
       </div>
 
-      {/* Modals */}
       <NewLeadModal open={showNew} onClose={() => setShowNew(false)} onCreated={load} />
       {statusLead && <StatusModal lead={statusLead} onClose={() => setStatusLead(null)} onUpdated={load} />}
     </div>
