@@ -1,24 +1,52 @@
 'use client';
 // src/app/(crm)/orders/page.tsx
+// Orders: Converted hone par order create hota hai (pending status)
+// Status filters: pending | dispatched | delivered | cancelled
 
 import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { ordersAPI } from '@/lib/api';
 import { Avatar, Pagination, Empty, Skeleton, Modal, Spinner } from '@/components/ui';
 import { fmtINR, fmtDate } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import type { Order } from '@/types';
 
+type OrderStatus = 'pending' | 'dispatched' | 'delivered' | 'cancelled';
+
+const STATUS_FILTERS: { value: string; label: string }[] = [
+  { value: '',           label: 'All' },
+  { value: 'pending',    label: '⏳ Pending' },
+  { value: 'dispatched', label: '🚚 Dispatched' },
+  { value: 'delivered',  label: '✅ Delivered' },
+  { value: 'cancelled',  label: '❌ Cancelled' },
+];
+
+const STATUS_COLORS: Record<string, string> = {
+  pending:    'bg-amber-50 text-amber-700 border border-amber-200',
+  dispatched: 'bg-blue-50 text-blue-700 border border-blue-200',
+  delivered:  'bg-green-50 text-green-700 border border-green-200',
+  cancelled:  'bg-orange-50 text-orange-700 border border-orange-200',
+};
+
+const PAYMENT_COLORS: Record<string, string> = {
+  cod:     'bg-amber-50 text-amber-700',
+  prepaid: 'bg-green-50 text-green-700',
+};
+
 export default function OrdersPage() {
-  const router = useRouter();
-  const [orders, setOrders]   = useState<Order[]>([]);
-  const [total, setTotal]     = useState(0);
-  const [page, setPage]       = useState(1);
-  const [loading, setLoading] = useState(true);
+  const [orders,       setOrders]       = useState<Order[]>([]);
+  const [total,        setTotal]        = useState(0);
+  const [page,         setPage]         = useState(1);
+  const [loading,      setLoading]      = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
-  const [trackModal, setTrackModal]     = useState<Order | null>(null);
-  const [trackForm,  setTrackForm]      = useState({ tracking_id:'', courier:'', delivery_date:'' });
-  const [trackSaving, setTrackSaving]   = useState(false);
+
+  // Update modal — for dispatching / delivering / cancelling
+  const [updateModal,  setUpdateModal]  = useState<Order | null>(null);
+  const [updateForm,   setUpdateForm]   = useState({
+    tracking_id: '', courier: '', dispatch_date: '',
+    delivery_date: '', cancelled_date: '', new_status: '' as OrderStatus | '',
+  });
+  const [updateSaving, setUpdateSaving] = useState(false);
+
   const LIMIT = 25;
 
   const load = useCallback(async () => {
@@ -33,63 +61,112 @@ export default function OrdersPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const saveTracking = async () => {
-    if (!trackModal) return;
-    setTrackSaving(true);
+  const openUpdate = (order: Order) => {
+    setUpdateModal(order);
+    setUpdateForm({
+      tracking_id:   order.tracking_id || '',
+      courier:       order.courier || '',
+      dispatch_date: '',
+      delivery_date: '',
+      cancelled_date: '',
+      new_status: '',
+    });
+  };
+
+  const saveUpdate = async () => {
+    if (!updateModal) return;
+    if (!updateForm.new_status) { toast.error('Naya status choose karo'); return; }
+
+    // Validation
+    if (updateForm.new_status === 'dispatched' && !updateForm.dispatch_date) {
+      toast.error('Dispatch date required'); return;
+    }
+    if (updateForm.new_status === 'delivered' && !updateForm.delivery_date) {
+      toast.error('Delivery date required'); return;
+    }
+    if (updateForm.new_status === 'cancelled' && !updateForm.cancelled_date) {
+      toast.error('Cancellation date required'); return;
+    }
+
+    setUpdateSaving(true);
     try {
-      await ordersAPI.updateTracking(trackModal.id, {
-        tracking_id:   trackForm.tracking_id || undefined,
-        courier:       trackForm.courier || undefined,
-        delivery_date: trackForm.delivery_date || undefined,
+      await ordersAPI.updateTracking(updateModal.id, {
+        status:         updateForm.new_status,
+        tracking_id:    updateForm.tracking_id || undefined,
+        courier:        updateForm.courier || undefined,
+        dispatch_date:  updateForm.dispatch_date || undefined,
+        delivery_date:  updateForm.delivery_date || undefined,
+        cancelled_date: updateForm.cancelled_date || undefined,
       });
-      toast.success('Tracking updated');
-      setTrackModal(null);
+      toast.success('Order updated!');
+      setUpdateModal(null);
       await load();
     } catch (e: any) { toast.error(e?.message || 'Failed'); }
-    finally { setTrackSaving(false); }
+    finally { setUpdateSaving(false); }
   };
 
   const pages = Math.ceil(total / LIMIT);
-  const STATUS_COLORS: Record<string, string> = {
-    pending: 'bg-amber-50 text-amber-700', dispatched: 'bg-blue-50 text-blue-700',
-    delivered: 'bg-green-50 text-green-700', returned: 'bg-red-50 text-red-700', cancelled: 'bg-gray-100 text-gray-500',
-  };
 
   return (
     <div>
       <div className="flex items-start justify-between mb-5">
         <div>
           <h1 className="font-display text-2xl font-semibold text-forest-DEFAULT">Orders</h1>
-          <p className="text-xs text-gray-500 mt-0.5">{total} orders total</p>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {total} orders — Lead convert hone par automatically create hote hain
+          </p>
         </div>
       </div>
 
       <div className="card">
+        {/* Status filter chips */}
         <div className="flex items-center gap-2 p-3 border-b border-gray-100 flex-wrap">
-          {['','pending','dispatched','delivered','returned','cancelled'].map((s) => (
-            <button key={s} onClick={() => { setStatusFilter(s); setPage(1); }}
-              className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${statusFilter === s ? 'border-forest-DEFAULT bg-green-50 text-forest-DEFAULT' : 'border-gray-200 text-gray-600'}`}>
-              {s || 'All'}
+          {STATUS_FILTERS.map((f) => (
+            <button key={f.value}
+              onClick={() => { setStatusFilter(f.value); setPage(1); }}
+              className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all
+                ${statusFilter === f.value
+                  ? 'border-forest-DEFAULT bg-green-50 text-forest-DEFAULT'
+                  : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+              {f.label}
             </button>
           ))}
         </div>
 
         {loading ? (
-          <div className="p-4 space-y-3">{Array.from({length:6}).map((_,i)=><Skeleton key={i} className="h-12 rounded"/>)}</div>
+          <div className="p-4 space-y-3">
+            {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-12 rounded" />)}
+          </div>
         ) : orders.length === 0 ? (
-          <Empty icon="📦" title="No orders found" />
+          <Empty icon="📦" title="No orders found"
+            description={statusFilter ? `Koi ${statusFilter} order nahi` : 'Lead convert hone par orders aate hain'} />
         ) : (
           <div className="overflow-x-auto">
             <table className="data-table">
               <thead>
-                <tr><th>Order</th><th>Customer</th><th>Agent</th><th>Amount</th><th>Tracking</th><th>Order Date</th><th>Status</th><th></th></tr>
+                <tr>
+                  <th>Order</th>
+                  <th>Customer</th>
+                  <th>Agent</th>
+                  <th>Amount</th>
+                  <th>Payment</th>
+                  <th>Tracking</th>
+                  <th>Order Date</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
               </thead>
               <tbody>
                 {orders.map((o) => (
                   <tr key={o.id}>
                     <td>
-                      <div className="text-sm font-semibold text-gray-900 max-w-[140px] truncate">{o.product_name}</div>
-                      <div className="text-xs text-gray-500">{o.source === 'shopify' ? '🛍 Shopify' : '🏢 CRM'}{o.is_repeat ? ' · Repeat' : ''}</div>
+                      <div className="text-sm font-semibold text-gray-900 max-w-[140px] truncate">
+                        {o.product_name}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {o.source === 'shopify' ? '🛍 Shopify' : '🏢 CRM'}
+                        {o.is_repeat ? ' · Repeat' : ''}
+                      </div>
                     </td>
                     <td>
                       <div className="text-sm font-medium">{o.customer_name || o.lead_name || '—'}</div>
@@ -97,17 +174,28 @@ export default function OrdersPage() {
                     </td>
                     <td className="text-xs text-gray-600">{o.agent_name || '—'}</td>
                     <td className="text-sm font-bold text-forest-DEFAULT">{fmtINR(o.amount)}</td>
-                    <td className="text-xs text-gray-600 font-mono">{o.tracking_id || <span className="text-gray-300">—</span>}</td>
+                    <td>
+                      {o.payment_status ? (
+                        <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full uppercase
+                          ${PAYMENT_COLORS[o.payment_status] || 'bg-gray-100 text-gray-600'}`}>
+                          {o.payment_status}
+                        </span>
+                      ) : <span className="text-gray-300 text-xs">—</span>}
+                    </td>
+                    <td className="text-xs text-gray-600 font-mono">
+                      {o.tracking_id || <span className="text-gray-300">—</span>}
+                    </td>
                     <td className="text-xs text-gray-500">{fmtDate(o.order_date)}</td>
                     <td>
-                      <span className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS[o.status] || 'bg-gray-100 text-gray-600'}`}>
+                      <span className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full
+                        ${STATUS_COLORS[o.status] || 'bg-gray-100 text-gray-600'}`}>
                         {o.status}
                       </span>
                     </td>
                     <td>
-                      {['pending','dispatched'].includes(o.status) && (
-                        <button className="btn btn-outline btn-xs"
-                          onClick={() => { setTrackModal(o); setTrackForm({ tracking_id: o.tracking_id||'', courier: o.courier||'', delivery_date: '' }); }}>
+                      {/* Update button — sirf pending aur dispatched par */}
+                      {['pending', 'dispatched'].includes(o.status) && (
+                        <button className="btn btn-outline btn-xs" onClick={() => openUpdate(o)}>
                           Update
                         </button>
                       )}
@@ -119,35 +207,132 @@ export default function OrdersPage() {
           </div>
         )}
 
-        {!loading && pages > 1 && <Pagination page={page} pages={pages} total={total} limit={LIMIT} onChange={setPage} />}
+        {!loading && pages > 1 && (
+          <Pagination page={page} pages={pages} total={total} limit={LIMIT} onChange={setPage} />
+        )}
       </div>
 
-      {/* Tracking modal */}
-      <Modal open={!!trackModal} onClose={() => setTrackModal(null)} title="Update Tracking"
-        footer={
-          <>
-            <button className="btn btn-outline" onClick={() => setTrackModal(null)} disabled={trackSaving}>Cancel</button>
-            <button className="btn btn-primary" onClick={saveTracking} disabled={trackSaving}>
-              {trackSaving ? <Spinner size={14} /> : 'Save'}
-            </button>
-          </>
-        }
-      >
-        <div className="space-y-3">
-          <div>
-            <label className="form-label">Tracking ID</label>
-            <input className="form-input" value={trackForm.tracking_id} onChange={(e) => setTrackForm(f=>({...f,tracking_id:e.target.value}))} placeholder="e.g. DTDC1234567890" />
+      {/* Update order modal */}
+      {updateModal && (
+        <Modal open onClose={() => setUpdateModal(null)} title={`Update Order — ${updateModal.product_name}`}
+          footer={
+            <>
+              <button className="btn btn-outline" onClick={() => setUpdateModal(null)} disabled={updateSaving}>
+                Cancel
+              </button>
+              <button className="btn btn-amber" onClick={saveUpdate} disabled={updateSaving}>
+                {updateSaving ? <Spinner size={14} /> : 'Save Update'}
+              </button>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            {/* Status to change to */}
+            <div>
+              <label className="form-label">Status Update karo <span className="text-red-500">*</span></label>
+              <div className="flex gap-2 flex-wrap mt-1">
+                {/* pending → dispatched ya cancelled */}
+                {updateModal.status === 'pending' && (
+                  <>
+                    <button type="button"
+                      onClick={() => setUpdateForm(f => ({ ...f, new_status: 'dispatched' }))}
+                      className={`px-4 py-2 rounded-lg text-xs font-bold border-2 transition-all
+                        ${updateForm.new_status === 'dispatched'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 text-gray-400'}`}>
+                      🚚 Dispatched
+                    </button>
+                    <button type="button"
+                      onClick={() => setUpdateForm(f => ({ ...f, new_status: 'cancelled' }))}
+                      className={`px-4 py-2 rounded-lg text-xs font-bold border-2 transition-all
+                        ${updateForm.new_status === 'cancelled'
+                          ? 'border-orange-500 bg-orange-50 text-orange-700'
+                          : 'border-gray-200 text-gray-400'}`}>
+                      ❌ Cancelled
+                    </button>
+                  </>
+                )}
+                {/* dispatched → delivered ya cancelled */}
+                {updateModal.status === 'dispatched' && (
+                  <>
+                    <button type="button"
+                      onClick={() => setUpdateForm(f => ({ ...f, new_status: 'delivered' }))}
+                      className={`px-4 py-2 rounded-lg text-xs font-bold border-2 transition-all
+                        ${updateForm.new_status === 'delivered'
+                          ? 'border-green-500 bg-green-50 text-green-700'
+                          : 'border-gray-200 text-gray-400'}`}>
+                      ✅ Delivered
+                    </button>
+                    <button type="button"
+                      onClick={() => setUpdateForm(f => ({ ...f, new_status: 'cancelled' }))}
+                      className={`px-4 py-2 rounded-lg text-xs font-bold border-2 transition-all
+                        ${updateForm.new_status === 'cancelled'
+                          ? 'border-orange-500 bg-orange-50 text-orange-700'
+                          : 'border-gray-200 text-gray-400'}`}>
+                      ❌ Cancelled
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Dispatched fields */}
+            {updateForm.new_status === 'dispatched' && (
+              <>
+                <div>
+                  <label className="form-label">Dispatch Date <span className="text-red-500">*</span></label>
+                  <input type="date" className="form-input"
+                    value={updateForm.dispatch_date}
+                    max={new Date().toISOString().split('T')[0]}
+                    onChange={(e) => setUpdateForm(f => ({ ...f, dispatch_date: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="form-label">Tracking ID</label>
+                  <input className="form-input" value={updateForm.tracking_id}
+                    onChange={(e) => setUpdateForm(f => ({ ...f, tracking_id: e.target.value }))}
+                    placeholder="e.g. DTDC1234567890" />
+                </div>
+                <div>
+                  <label className="form-label">Courier</label>
+                  <input className="form-input" value={updateForm.courier}
+                    onChange={(e) => setUpdateForm(f => ({ ...f, courier: e.target.value }))}
+                    placeholder="e.g. DTDC, BlueDart, Delhivery" />
+                </div>
+              </>
+            )}
+
+            {/* Delivered fields */}
+            {updateForm.new_status === 'delivered' && (
+              <>
+                <div>
+                  <label className="form-label">Delivery Date <span className="text-red-500">*</span></label>
+                  <input type="date" className="form-input"
+                    value={updateForm.delivery_date}
+                    max={new Date().toISOString().split('T')[0]}
+                    onChange={(e) => setUpdateForm(f => ({ ...f, delivery_date: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="form-label">Tracking ID (agar nahi daala)</label>
+                  <input className="form-input" value={updateForm.tracking_id}
+                    onChange={(e) => setUpdateForm(f => ({ ...f, tracking_id: e.target.value }))}
+                    placeholder="e.g. DTDC1234567890" />
+                </div>
+              </>
+            )}
+
+            {/* Cancelled fields */}
+            {updateForm.new_status === 'cancelled' && (
+              <div>
+                <label className="form-label">Cancellation Date <span className="text-red-500">*</span></label>
+                <input type="date" className="form-input"
+                  value={updateForm.cancelled_date}
+                  max={new Date().toISOString().split('T')[0]}
+                  onChange={(e) => setUpdateForm(f => ({ ...f, cancelled_date: e.target.value }))} />
+              </div>
+            )}
           </div>
-          <div>
-            <label className="form-label">Courier</label>
-            <input className="form-input" value={trackForm.courier} onChange={(e) => setTrackForm(f=>({...f,courier:e.target.value}))} placeholder="e.g. DTDC, BlueDart, Delhivery" />
-          </div>
-          <div>
-            <label className="form-label">Delivery Date (marks as Delivered)</label>
-            <input type="date" className="form-input" value={trackForm.delivery_date} onChange={(e) => setTrackForm(f=>({...f,delivery_date:e.target.value}))} />
-          </div>
-        </div>
-      </Modal>
+        </Modal>
+      )}
     </div>
   );
 }
