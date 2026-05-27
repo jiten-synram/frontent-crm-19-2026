@@ -22,7 +22,22 @@ export interface AuthState {
 }
 
 // ── Lead types ──────────────────────────────────────────────────
-export type LeadStatus = 'new' | 'in_process' | 'follow_up' | 'converted' | 'delivered' | 'closed_lost';
+// CHANGES:
+// 1. closed_lost → dead
+// 2. cnr added
+// 3. cancelled added
+// 4. delivered removed from direct selection (only via pipeline)
+// 5. New fields: payment_status, shipping_address, close_date, cancelled_date, delivery_date
+export type LeadStatus =
+  | 'new'
+  | 'in_process'
+  | 'follow_up'
+  | 'cnr'
+  | 'converted'
+  | 'delivered'
+  | 'cancelled'
+  | 'dead';
+
 export type LeadSource = 'call' | 'whatsapp' | 'referral' | 'campaign' | 'website' | 'meta_ads' | 'shopify';
 
 export interface Lead {
@@ -47,11 +62,18 @@ export interface Lead {
   product_name?: string;
   order_amount?: number;
   tracking_id?: string;
+  // New fields
+  payment_status?: 'cod' | 'prepaid';
+  shipping_address?: string;
+  close_date?: string;
+  cancelled_date?: string;
+  delivery_date?: string;
+  remark?: string;
+  // Existing fields
   is_repeat: boolean;
   repeat_count: number;
   linked_customer_id?: number;
   is_duplicate: boolean;
-  remark?: string;
   next_followup_at?: string;
   last_followup_at?: string;
   followup_count: number;
@@ -64,7 +86,6 @@ export interface Lead {
   cust_ltv?: number;
   created_at: string;
   updated_at: string;
-  // Nested (from GET /leads/:id)
   notes?: LeadNote[];
   callLogs?: CallLog[];
   history?: StatusHistory[];
@@ -119,53 +140,10 @@ export interface FollowUp {
   scheduled_at: string;
   completed_at?: string;
   status: 'pending' | 'done' | 'missed' | 'rescheduled';
-  type: 'call' | 'whatsapp' | 'email' | 'visit';
-  notes?: string;
-  created_at: string;
-}
-
-// ── Customer types ──────────────────────────────────────────────
-export interface Customer {
-  id: number;
-  name: string;
-  phone: string;
-  alt_phone?: string;
-  email?: string;
-  city?: string;
-  state?: string;
-  first_lead_id?: number;
-  assigned_to?: number;
-  agent_name?: string;
-  total_orders: number;
-  total_revenue: number;
-  lifetime_value: number;
-  avg_order_value: number;
-  first_purchase?: string;
-  last_purchase?: string;
-  shopify_cust_id?: string;
-  is_active: boolean;
-  notes?: string;
-  created_at: string;
-  purchases?: Purchase[];
-}
-
-export interface Purchase {
-  id: number;
-  customer_id: number;
-  lead_id?: number;
-  order_id?: number;
-  product_name: string;
-  amount: number;
-  tracking_id?: string;
-  order_date: string;
-  delivery_date?: string;
-  source: 'crm' | 'shopify';
-  shopify_order_id?: string;
-  status: string;
-  created_at: string;
 }
 
 // ── Order types ─────────────────────────────────────────────────
+// CHANGE: 'returned' removed, status now: pending | dispatched | delivered | cancelled
 export interface Order {
   id: number;
   lead_id?: number;
@@ -180,10 +158,13 @@ export interface Order {
   qty: number;
   tracking_id?: string;
   courier?: string;
+  payment_status?: 'cod' | 'prepaid';
+  shipping_address?: string;
   order_date: string;
   dispatch_date?: string;
   delivery_date?: string;
-  status: 'pending' | 'dispatched' | 'delivered' | 'returned' | 'cancelled';
+  cancelled_date?: string;
+  status: 'pending' | 'dispatched' | 'delivered' | 'cancelled';
   revenue_countable: boolean;
   is_repeat: boolean;
   order_index: number;
@@ -193,24 +174,9 @@ export interface Order {
   created_at: string;
 }
 
-// ── Dashboard types ─────────────────────────────────────────────
 export interface DashboardCards {
   total: number;
   new: number;
-  in_process: number;
-  follow_up: number;
-  converted: number;
-  delivered: number;
-  closed_lost: number;
-  repeat_orders: number;
-  total_revenue: number;
-}
-
-export interface UserPerformance {
-  id: number;
-  name: string;
-  email: string;
-  total_leads: number;
   converted: number;
   delivered: number;
   revenue: number;
@@ -224,7 +190,6 @@ export interface MonthlyRevenue {
   orders: number;
 }
 
-// ── Incentive types ─────────────────────────────────────────────
 export interface Incentive {
   id: number;
   user_id: number;
@@ -243,7 +208,6 @@ export interface Incentive {
   created_at: string;
 }
 
-// ── Campaign types ──────────────────────────────────────────────
 export interface Campaign {
   id: number;
   name: string;
@@ -260,7 +224,6 @@ export interface Campaign {
   created_at: string;
 }
 
-// ── Webhook log types ───────────────────────────────────────────
 export interface WebhookLog {
   id: number;
   source: string;
@@ -272,7 +235,6 @@ export interface WebhookLog {
   created_at: string;
 }
 
-// ── API response wrappers ────────────────────────────────────────
 export interface ApiResponse<T = unknown> {
   success: boolean;
   message?: string;
@@ -287,7 +249,6 @@ export interface PaginatedResponse<T> {
   data: T[];
 }
 
-// ── Form types ──────────────────────────────────────────────────
 export interface NewLeadForm {
   name: string;
   phone: string;
@@ -310,4 +271,10 @@ export interface StatusUpdateForm {
   order_amount?: number;
   tracking_id?: string;
   next_followup_at?: string;
+  payment_status?: 'cod' | 'prepaid';
+  shipping_address?: string;
+  close_date?: string;
+  cancelled_date?: string;
+  delivery_date?: string;
+  product_name?: string;
 }
