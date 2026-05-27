@@ -278,3 +278,43 @@ export interface StatusUpdateForm {
   delivery_date?: string;
   product_name?: string;
 }
+
+export interface Customer {
+  id: number;
+  name: string;
+  phone: string;
+  alt_phone?: string;
+  email?: string;
+  city?: string;
+  state?: string;
+  first_lead_id?: number;
+  assigned_to?: number;
+  agent_name?: string;
+  total_orders: number;
+  total_revenue: number;
+  lifetime_value: number;
+  avg_order_value: number;
+  first_purchase?: string;
+  last_purchase?: string;
+  shopify_cust_id?: string;
+  is_active: boolean;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  purchases?: Purchase[];
+}
+
+export interface Purchase {
+  id: number;
+  customer_id: number;
+  lead_id?: number;
+  order_id?: number;
+  product_name: string;
+  amount: number;
+  tracking_id?: string;
+  order_date: string;
+  delivery_date?: string;
+  source: 'crm' | 'shopify';
+  status: string;
+  created_at: string;
+}
