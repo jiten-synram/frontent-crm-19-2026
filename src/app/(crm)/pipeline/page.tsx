@@ -265,7 +265,7 @@ export default function PipelinePage() {
                 <div>
                   <label className="form-label">Close Date <span className="text-red-500">*</span></label>
                   <input type="date" className="form-input" value={closeDate}
-                    max={new Date().toISOString().split('T')[0]}
+                    min={new Date().toISOString().split('T')[0]}
                     onChange={(e) => setCloseDate(e.target.value)} />
                 </div>
                 <div>
@@ -286,7 +286,7 @@ export default function PipelinePage() {
                 <div>
                   <label className="form-label">Delivery Date <span className="text-red-500">*</span></label>
                   <input type="date" className="form-input" value={deliveryDate}
-                    max={new Date().toISOString().split('T')[0]}
+                    min={new Date().toISOString().split('T')[0]}
                     onChange={(e) => setDeliveryDate(e.target.value)} />
                 </div>
                 <div>
@@ -307,7 +307,7 @@ export default function PipelinePage() {
                 <div>
                   <label className="form-label">Cancelled Date <span className="text-red-500">*</span></label>
                   <input type="date" className="form-input" value={cancelledDate}
-                    max={new Date().toISOString().split('T')[0]}
+                    min={new Date().toISOString().split('T')[0]}
                     onChange={(e) => setCancelledDate(e.target.value)} />
                 </div>
               </>
