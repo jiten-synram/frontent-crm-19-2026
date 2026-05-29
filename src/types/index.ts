@@ -22,12 +22,6 @@ export interface AuthState {
 }
 
 // ── Lead types ──────────────────────────────────────────────────
-// CHANGES:
-// 1. closed_lost → dead
-// 2. cnr added
-// 3. cancelled added
-// 4. delivered removed from direct selection (only via pipeline)
-// 5. New fields: payment_status, shipping_address, close_date, cancelled_date, delivery_date
 export type LeadStatus =
   | 'new'
   | 'in_process'
@@ -62,14 +56,12 @@ export interface Lead {
   product_name?: string;
   order_amount?: number;
   tracking_id?: string;
-  // New fields
   payment_status?: 'cod' | 'prepaid';
   shipping_address?: string;
   close_date?: string;
   cancelled_date?: string;
   delivery_date?: string;
   remark?: string;
-  // Existing fields
   is_repeat: boolean;
   repeat_count: number;
   linked_customer_id?: number;
@@ -143,7 +135,6 @@ export interface FollowUp {
 }
 
 // ── Order types ─────────────────────────────────────────────────
-// CHANGE: 'returned' removed, status now: pending | dispatched | delivered | cancelled
 export interface Order {
   id: number;
   lead_id?: number;
@@ -172,6 +163,52 @@ export interface Order {
   source: 'crm' | 'shopify';
   notes?: string;
   created_at: string;
+}
+
+// ── Purchase types (Customer ke orders) ─────────────────────────
+export interface Purchase {
+  id: number;
+  customer_id: number;
+  lead_id?: number;
+  order_id?: number;
+  product_name: string;
+  amount: number;
+  tracking_id?: string;
+  payment_status?: 'cod' | 'prepaid';
+  shipping_address?: string;
+  order_date: string;
+  delivery_date?: string;
+  cancelled_date?: string;
+  source: 'crm' | 'shopify';
+  status: string;
+  created_at: string;
+}
+
+// ── Customer types ───────────────────────────────────────────────
+export interface Customer {
+  id: number;
+  name: string;
+  phone: string;
+  alt_phone?: string;
+  email?: string;
+  city?: string;
+  state?: string;
+  shipping_address?: string;
+  first_lead_id?: number;
+  assigned_to?: number;
+  agent_name?: string;
+  total_orders: number;
+  total_revenue: number;
+  lifetime_value: number;
+  avg_order_value: number;
+  first_purchase?: string;
+  last_purchase?: string;
+  shopify_cust_id?: string;
+  is_active: boolean;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  purchases?: Purchase[];
 }
 
 export interface DashboardCards {
@@ -277,44 +314,4 @@ export interface StatusUpdateForm {
   cancelled_date?: string;
   delivery_date?: string;
   product_name?: string;
-}
-
-export interface Customer {
-  id: number;
-  name: string;
-  phone: string;
-  alt_phone?: string;
-  email?: string;
-  city?: string;
-  state?: string;
-  first_lead_id?: number;
-  assigned_to?: number;
-  agent_name?: string;
-  total_orders: number;
-  total_revenue: number;
-  lifetime_value: number;
-  avg_order_value: number;
-  first_purchase?: string;
-  last_purchase?: string;
-  shopify_cust_id?: string;
-  is_active: boolean;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-  purchases?: Purchase[];
-}
-
-export interface Purchase {
-  id: number;
-  customer_id: number;
-  lead_id?: number;
-  order_id?: number;
-  product_name: string;
-  amount: number;
-  tracking_id?: string;
-  order_date: string;
-  delivery_date?: string;
-  source: 'crm' | 'shopify';
-  status: string;
-  created_at: string;
 }
