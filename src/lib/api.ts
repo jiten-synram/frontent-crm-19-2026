@@ -124,6 +124,9 @@ export const customersAPI = {
   get: (id: number) => api.get(`/customers/${id}`),
   reorder: (id: number, data: Record<string, unknown>) =>
     api.post(`/customers/${id}/reorder`, data),
+   // ← YEH NAYI LINE ADD KARO
+  cancelOrder: (customerId: number, orderId: number, data: { cancelled_date: string }) =>
+    api.patch(`/customers/${customerId}/orders/${orderId}/cancel`, data),
 };
 
 // ── ORDERS ────────────────────────────────────────────────────────────
@@ -150,32 +153,10 @@ export const reportsAPI = {
   campaigns: () => api.get('/reports/campaign-performance'),
   incentives: (params?: Record<string, unknown>) =>
     api.get('/reports/incentives', { params }),
-  // export: (params: Record<string, unknown>) => {
-  //   const token = localStorage.getItem('access_token');
-  //   const qs = new URLSearchParams(params as Record<string, string>).toString();
-  //   window.open(`${BASE_URL}/reports/export?${qs}&token=${token}`, '_blank');
-  // },
-  export: async (params: Record<string, unknown>) => {
+  export: (params: Record<string, unknown>) => {
     const token = localStorage.getItem('access_token');
-    const cleanParams: Record<string, string> = {};
-    Object.entries(params).forEach(([k, v]) => {
-      if (v !== '' && v !== null && v !== undefined) {
-        cleanParams[k] = String(v);
-      }
-    });
-    const qs = new URLSearchParams(cleanParams).toString();
-    const res = await fetch(`${BASE_URL}/reports/export?${qs}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    if (!res.ok) throw new Error('Export failed');
-    const blob = await res.blob();
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    const ext  = cleanParams.format === 'csv' ? 'csv' : 'xlsx';
-    a.href     = url;
-    a.download = `yogveda-report-${Date.now()}.${ext}`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const qs = new URLSearchParams(params as Record<string, string>).toString();
+    window.open(`${BASE_URL}/reports/export?${qs}&token=${token}`, '_blank');
   },
 };
 
@@ -202,5 +183,6 @@ export const integrationsAPI = {
   saveSettings: (settings: Record<string, string>) =>
     api.post('/integrations/settings', { settings }),
 };
+
 
 export default api;
