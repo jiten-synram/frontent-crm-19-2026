@@ -37,7 +37,10 @@ export default function OrdersPage() {
   const [total,        setTotal]        = useState(0);
   const [page,         setPage]         = useState(1);
   const [loading,      setLoading]      = useState(true);
-  const [statusFilter, setStatusFilter] = useState('');
+  // const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter,  setStatusFilter]  = useState('');
+const [paymentFilter, setPaymentFilter] = useState('');
+const [exporting,     setExporting]     = useState(false);
 
   // Update modal — for dispatching / delivering / cancelling
   const [updateModal,  setUpdateModal]  = useState<Order | null>(null);
@@ -52,12 +55,17 @@ export default function OrdersPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res: any = await ordersAPI.list({ page, limit: LIMIT, status: statusFilter || undefined });
+      // const res: any = await ordersAPI.list({ page, limit: LIMIT, status: statusFilter || undefined });
+      const res: any = await ordersAPI.list({
+        page, limit: LIMIT,
+        status:         statusFilter  || undefined,
+        payment_status: paymentFilter || undefined,
+      });
       setOrders(res?.orders || []);
       setTotal(res?.total || 0);
     } catch { toast.error('Failed to load orders'); }
     finally { setLoading(false); }
-  }, [page, statusFilter]);
+  }, [page, statusFilter, paymentFilter]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -120,7 +128,7 @@ export default function OrdersPage() {
 
       <div className="card">
         {/* Status filter chips */}
-        <div className="flex items-center gap-2 p-3 border-b border-gray-100 flex-wrap">
+        {/* <div className="flex items-center gap-2 p-3 border-b border-gray-100 flex-wrap">
           {STATUS_FILTERS.map((f) => (
             <button key={f.value}
               onClick={() => { setStatusFilter(f.value); setPage(1); }}
@@ -131,7 +139,97 @@ export default function OrdersPage() {
               {f.label}
             </button>
           ))}
-        </div>
+        </div> */}
+
+        {/* Status filter chips */}
+<div className="flex items-center gap-2 p-3 border-b border-gray-100 flex-wrap">
+  {/* Existing status chips — same rahenge */}
+  {STATUS_FILTERS.map((f) => (
+    <button key={f.value}
+      onClick={() => { setStatusFilter(f.value); setPage(1); }}
+      className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all
+        ${statusFilter === f.value
+          ? 'border-forest-DEFAULT bg-green-50 text-forest-DEFAULT'
+          : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+      {f.label}
+    </button>
+  ))}
+
+  {/* ✅ Payment filter */}
+  <span className="text-gray-200 mx-1">|</span>
+  {[
+    { value: '',        label: 'All Payments' },
+    { value: 'cod',     label: '💵 COD' },
+    { value: 'prepaid', label: '💳 Prepaid' },
+  ].map((f) => (
+    <button key={f.value}
+      onClick={() => { setPaymentFilter(f.value); setPage(1); }}
+      className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all
+        ${paymentFilter === f.value
+          ? 'border-forest-DEFAULT bg-green-50 text-forest-DEFAULT'
+          : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+      {f.label}
+    </button>
+  ))}
+
+  {/* ✅ Export button — right side */}
+  <div className="ml-auto flex gap-2">
+    <button
+      className="btn btn-outline btn-sm text-xs"
+      disabled={exporting}
+      onClick={async () => {
+        setExporting(true);
+        try {
+          const token    = localStorage.getItem('access_token');
+          const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+          const params   = new URLSearchParams({ format: 'excel' });
+          if (statusFilter)  params.set('status',         statusFilter);
+          if (paymentFilter) params.set('payment_status', paymentFilter);
+          const res  = await fetch(`${BASE_URL}/orders/export?${params}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (!res.ok) throw new Error('Export failed');
+          const blob = await res.blob();
+          const url  = URL.createObjectURL(blob);
+          const a    = document.createElement('a');
+          a.href     = url;
+          a.download = `orders-${Date.now()}.xlsx`;
+          a.click();
+          URL.revokeObjectURL(url);
+        } catch { toast.error('Export failed'); }
+        finally { setExporting(false); }
+      }}>
+      {exporting ? '...' : '↓ Excel'}
+    </button>
+    <button
+      className="btn btn-outline btn-sm text-xs"
+      disabled={exporting}
+      onClick={async () => {
+        setExporting(true);
+        try {
+          const token    = localStorage.getItem('access_token');
+          const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+          const params   = new URLSearchParams({ format: 'csv' });
+          if (statusFilter)  params.set('status',         statusFilter);
+          if (paymentFilter) params.set('payment_status', paymentFilter);
+          const res  = await fetch(`${BASE_URL}/orders/export?${params}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (!res.ok) throw new Error('Export failed');
+          const blob = await res.blob();
+          const url  = URL.createObjectURL(blob);
+          const a    = document.createElement('a');
+          a.href     = url;
+          a.download = `orders-${Date.now()}.csv`;
+          a.click();
+          URL.revokeObjectURL(url);
+        } catch { toast.error('Export failed'); }
+        finally { setExporting(false); }
+      }}>
+      {exporting ? '...' : '↓ CSV'}
+    </button>
+  </div>
+</div>
 
         {loading ? (
           <div className="p-4 space-y-3">
@@ -152,7 +250,8 @@ export default function OrdersPage() {
                   <th>Payment</th>
                   <th>Tracking</th>
                   <th>Order Date</th>
-                  <th>Status1</th>
+                  <th>Delivery Date</th>
+                  <th>Status</th>
                   <th></th>
                 </tr>
               </thead>
@@ -186,6 +285,9 @@ export default function OrdersPage() {
                       {o.tracking_id || <span className="text-gray-300">—</span>}
                     </td>
                     <td className="text-xs text-gray-500">{fmtDate(o.order_date)}</td>
+                    <td className="text-xs text-gray-500">
+                      {o.delivery_date ? fmtDate(o.delivery_date) : '—'}
+                    </td>
                     <td>
                       <span className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full
                         ${STATUS_COLORS[o.status] || 'bg-gray-100 text-gray-600'}`}>
