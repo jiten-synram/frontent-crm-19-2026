@@ -125,7 +125,7 @@ export const customersAPI = {
   reorder: (id: number, data: Record<string, unknown>) =>
     api.post(`/customers/${id}/reorder`, data),
    // ← YEH NAYI LINE ADD KARO
-  cancelOrder: (customerId: number, orderId: number, data: { cancelled_date: string }) =>
+  cancelOrder: (customerId: number, orderId: number, data: { cancelled_date: string; remark?: string | null; }) =>
     api.patch(`/customers/${customerId}/orders/${orderId}/cancel`, data),
 };
 
