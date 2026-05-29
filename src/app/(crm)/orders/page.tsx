@@ -152,7 +152,7 @@ export default function OrdersPage() {
                   <th>Payment</th>
                   <th>Tracking</th>
                   <th>Order Date</th>
-                  <th>Status</th>
+                  <th>Status1</th>
                   <th></th>
                 </tr>
               </thead>
