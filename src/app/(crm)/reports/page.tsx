@@ -1,439 +1,260 @@
 'use client';
-// src/app/(crm)/orders/page.tsx
-// Orders: Converted hone par order create hota hai (pending status)
-// Status filters: pending | dispatched | delivered | cancelled
+// src/app/(crm)/reports/page.tsx
 
-import { useEffect, useState, useCallback } from 'react';
-import { ordersAPI } from '@/lib/api';
-import { Avatar, Pagination, Empty, Skeleton, Modal, Spinner } from '@/components/ui';
-import { fmtINR, fmtDate } from '@/lib/utils';
+import { useEffect, useState } from 'react';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Tooltip, Legend } from 'chart.js';
+import { Bar } from 'react-chartjs-2';
+import { reportsAPI } from '@/lib/api';
+import { useAuthStore } from '@/store/auth';
+import { Avatar, Empty, Skeleton, Spinner } from '@/components/ui';
+import { fmtINR, fmtDate, avatarColor } from '@/lib/utils';
 import toast from 'react-hot-toast';
-import type { Order } from '@/types';
 
-type OrderStatus = 'pending' | 'dispatched' | 'delivered' | 'cancelled';
+ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
-const STATUS_FILTERS: { value: string; label: string }[] = [
-  { value: '',           label: 'All' },
-  { value: 'pending',    label: '⏳ Pending' },
-  { value: 'dispatched', label: '🚚 Dispatched' },
-  { value: 'delivered',  label: '✅ Delivered' },
-  { value: 'cancelled',  label: '❌ Cancelled' },
-];
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+type Tab = 'revenue' | 'team' | 'campaigns' | 'incentives';
 
-const STATUS_COLORS: Record<string, string> = {
-  pending:    'bg-amber-50 text-amber-700 border border-amber-200',
-  dispatched: 'bg-blue-50 text-blue-700 border border-blue-200',
-  delivered:  'bg-green-50 text-green-700 border border-green-200',
-  cancelled:  'bg-orange-50 text-orange-700 border border-orange-200',
-};
+export default function ReportsPage() {
+  const { isAdmin } = useAuthStore();
+  // ✅ Fix 1 — Sales user ke liye 'incentives' se shuru karo
+  const [tab, setTab]     = useState<Tab>(isAdmin() ? 'revenue' : 'incentives');
+  const [data, setData]   = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [filters, setFilters] = useState({ start_date:'', end_date:'', assigned_to:'' });
+  const [users, setUsers]     = useState<any[]>([]); // ✅ NEW
 
-const PAYMENT_COLORS: Record<string, string> = {
-  cod:     'bg-amber-50 text-amber-700',
-  prepaid: 'bg-green-50 text-green-700',
-};
+  // ✅ Admin ke liye users load karo
+  useEffect(() => {
+    if (isAdmin()) {
+      import('@/lib/api').then(({ authAPI }) => {
+        authAPI.getUsers({ role:'sales', is_active:'true' })
+          .then((d: any) => setUsers(d?.users || []))
+          .catch(() => {});
+      });
+    }
+  }, []);
 
-export default function OrdersPage() {
-  const [orders,       setOrders]       = useState<Order[]>([]);
-  const [total,        setTotal]        = useState(0);
-  const [page,         setPage]         = useState(1);
-  const [loading,      setLoading]      = useState(true);
-  // const [statusFilter, setStatusFilter] = useState('');
-  const [statusFilter,  setStatusFilter]  = useState('');
-const [paymentFilter, setPaymentFilter] = useState('');
-const [exporting,     setExporting]     = useState(false);
-
-  // Update modal — for dispatching / delivering / cancelling
-  const [updateModal,  setUpdateModal]  = useState<Order | null>(null);
-  const [updateForm,   setUpdateForm]   = useState({
-    tracking_id: '', courier: '', dispatch_date: '',
-    delivery_date: '', cancelled_date: '', new_status: '' as OrderStatus | '',
-  });
-  const [updateSaving, setUpdateSaving] = useState(false);
-
-  const LIMIT = 25;
-
-  const load = useCallback(async () => {
+  const load = async () => {
     setLoading(true);
     try {
-      // const res: any = await ordersAPI.list({ page, limit: LIMIT, status: statusFilter || undefined });
-      const res: any = await ordersAPI.list({
-        page, limit: LIMIT,
-        status:         statusFilter  || undefined,
-        payment_status: paymentFilter || undefined,
-      });
-      setOrders(res?.orders || []);
-      setTotal(res?.total || 0);
-    } catch { toast.error('Failed to load orders'); }
+      let res: any;
+      if      (tab === 'revenue')    res = await reportsAPI.revenue(filters);
+      else if (tab === 'team')       res = await reportsAPI.team(filters);
+      else if (tab === 'campaigns')  res = await reportsAPI.campaigns();
+      else if (tab === 'incentives') res = await reportsAPI.incentives();
+      setData(res);
+    } catch { toast.error('Failed to load report'); }
     finally { setLoading(false); }
-  }, [page, statusFilter, paymentFilter]);
-
-  useEffect(() => { load(); }, [load]);
-
-  const openUpdate = (order: Order) => {
-    setUpdateModal(order);
-    setUpdateForm({
-      tracking_id:   order.tracking_id || '',
-      courier:       order.courier || '',
-      dispatch_date: '',
-      delivery_date: '',
-      cancelled_date: '',
-      new_status: '',
-    });
   };
 
-  const saveUpdate = async () => {
-    if (!updateModal) return;
-    if (!updateForm.new_status) { toast.error('Naya status choose karo'); return; }
+  useEffect(() => { load(); }, [tab]);
 
-    // Validation
-    if (updateForm.new_status === 'dispatched' && !updateForm.dispatch_date) {
-      toast.error('Dispatch date required'); return;
-    }
-    if (updateForm.new_status === 'delivered' && !updateForm.delivery_date) {
-      toast.error('Delivery date required'); return;
-    }
-    if (updateForm.new_status === 'cancelled' && !updateForm.cancelled_date) {
-      toast.error('Cancellation date required'); return;
-    }
-
-    setUpdateSaving(true);
-    try {
-      await ordersAPI.updateTracking(updateModal.id, {
-        status:         updateForm.new_status,
-        tracking_id:    updateForm.tracking_id || undefined,
-        courier:        updateForm.courier || undefined,
-        dispatch_date:  updateForm.dispatch_date || undefined,
-        delivery_date:  updateForm.delivery_date || undefined,
-        cancelled_date: updateForm.cancelled_date || undefined,
-      });
-      toast.success('Order updated!');
-      setUpdateModal(null);
-      await load();
-    } catch (e: any) { toast.error(e?.message || 'Failed'); }
-    finally { setUpdateSaving(false); }
-  };
-
-  const pages = Math.ceil(total / LIMIT);
+  const TABS = [
+    { key: 'revenue',    label: 'Revenue',          adminOnly: false },
+    { key: 'team',       label: 'Team Performance',  adminOnly: false },
+    { key: 'campaigns',  label: 'Campaigns',         adminOnly: false },
+    { key: 'incentives', label: 'Incentives',        adminOnly: false },
+  ].filter((t) => !t.adminOnly || isAdmin());
 
   return (
     <div>
       <div className="flex items-start justify-between mb-5">
         <div>
-          <h1 className="font-display text-2xl font-semibold text-forest-DEFAULT">Orders</h1>
-          <p className="text-xs text-gray-500 mt-0.5">
-            {total} orders — Lead convert hone par automatically create hote hain
-          </p>
+          <h1 className="font-display text-2xl font-semibold text-forest-DEFAULT">Reports & Analytics</h1>
+          <p className="text-xs text-gray-500 mt-0.5">Performance, revenue, and team insights</p>
+        </div>
+        <div className="flex gap-2">
+          {/* ✅ User filter — sirf admin ke liye */}
+          {isAdmin() && (
+            <select className="form-select text-xs py-1.5"
+              value={filters.assigned_to}
+              onChange={(e) => setFilters(f => ({ ...f, assigned_to: e.target.value }))}>
+              <option value="">All Users</option>
+              {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+          )}
+          <input type="date" className="form-input text-xs py-1.5" value={filters.start_date} onChange={(e) => setFilters(f=>({...f,start_date:e.target.value}))} />
+          <input type="date" className="form-input text-xs py-1.5" value={filters.end_date}   onChange={(e) => setFilters(f=>({...f,end_date:e.target.value}))} />
+          <button className="btn btn-outline btn-sm text-xs" onClick={load}>Apply</button>
+          {/* ✅ Fix 2 — Export with user filter */}
+          <button className="btn btn-outline btn-sm text-xs" onClick={() => reportsAPI.export({ format: 'excel', ...filters, ...(selectedUser ? { assigned_to: selectedUser } : {}) })}>↓ Excel</button>
+          <button className="btn btn-outline btn-sm text-xs" onClick={() => reportsAPI.export({ format: 'csv', ...filters, ...(selectedUser ? { assigned_to: selectedUser } : {}) })}>↓ CSV</button>
         </div>
       </div>
 
-      <div className="card">
-        {/* Status filter chips */}
-        {/* <div className="flex items-center gap-2 p-3 border-b border-gray-100 flex-wrap">
-          {STATUS_FILTERS.map((f) => (
-            <button key={f.value}
-              onClick={() => { setStatusFilter(f.value); setPage(1); }}
-              className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all
-                ${statusFilter === f.value
-                  ? 'border-forest-DEFAULT bg-green-50 text-forest-DEFAULT'
-                  : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
-              {f.label}
-            </button>
-          ))}
-        </div> */}
-
-        {/* Status filter chips */}
-<div className="flex items-center gap-2 p-3 border-b border-gray-100 flex-wrap">
-  {/* Existing status chips — same rahenge */}
-  {STATUS_FILTERS.map((f) => (
-    <button key={f.value}
-      onClick={() => { setStatusFilter(f.value); setPage(1); }}
-      className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all
-        ${statusFilter === f.value
-          ? 'border-forest-DEFAULT bg-green-50 text-forest-DEFAULT'
-          : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
-      {f.label}
-    </button>
-  ))}
-
-  {/* ✅ Payment filter */}
-  <span className="text-gray-200 mx-1">|</span>
-  {[
-    { value: '',        label: 'All Payments' },
-    { value: 'cod',     label: '💵 COD' },
-    { value: 'prepaid', label: '💳 Prepaid' },
-  ].map((f) => (
-    <button key={f.value}
-      onClick={() => { setPaymentFilter(f.value); setPage(1); }}
-      className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all
-        ${paymentFilter === f.value
-          ? 'border-forest-DEFAULT bg-green-50 text-forest-DEFAULT'
-          : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
-      {f.label}
-    </button>
-  ))}
-
-  {/* ✅ Export button — right side */}
-  <div className="ml-auto flex gap-2">
-    <button
-      className="btn btn-outline btn-sm text-xs"
-      disabled={exporting}
-      onClick={async () => {
-        setExporting(true);
-        try {
-          const token    = localStorage.getItem('access_token');
-          const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-          const params   = new URLSearchParams({ format: 'excel' });
-          if (statusFilter)  params.set('status',         statusFilter);
-          if (paymentFilter) params.set('payment_status', paymentFilter);
-          const res  = await fetch(`${BASE_URL}/orders/export?${params}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          if (!res.ok) throw new Error('Export failed');
-          const blob = await res.blob();
-          const url  = URL.createObjectURL(blob);
-          const a    = document.createElement('a');
-          a.href     = url;
-          a.download = `orders-${Date.now()}.xlsx`;
-          a.click();
-          URL.revokeObjectURL(url);
-        } catch { toast.error('Export failed'); }
-        finally { setExporting(false); }
-      }}>
-      {exporting ? '...' : '↓ Excel'}
-    </button>
-    <button
-      className="btn btn-outline btn-sm text-xs"
-      disabled={exporting}
-      onClick={async () => {
-        setExporting(true);
-        try {
-          const token    = localStorage.getItem('access_token');
-          const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-          const params   = new URLSearchParams({ format: 'csv' });
-          if (statusFilter)  params.set('status',         statusFilter);
-          if (paymentFilter) params.set('payment_status', paymentFilter);
-          const res  = await fetch(`${BASE_URL}/orders/export?${params}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          if (!res.ok) throw new Error('Export failed');
-          const blob = await res.blob();
-          const url  = URL.createObjectURL(blob);
-          const a    = document.createElement('a');
-          a.href     = url;
-          a.download = `orders-${Date.now()}.csv`;
-          a.click();
-          URL.revokeObjectURL(url);
-        } catch { toast.error('Export failed'); }
-        finally { setExporting(false); }
-      }}>
-      {exporting ? '...' : '↓ CSV'}
-    </button>
-  </div>
-</div>
-
-        {loading ? (
-          <div className="p-4 space-y-3">
-            {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-12 rounded" />)}
-          </div>
-        ) : orders.length === 0 ? (
-          <Empty icon="📦" title="No orders found"
-            description={statusFilter ? `Koi ${statusFilter} order nahi` : 'Lead convert hone par orders aate hain'} />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Order</th>
-                  <th>Customer</th>
-                  <th>Agent</th>
-                  <th>Amount</th>
-                  <th>Payment</th>
-                  <th>Tracking</th>
-                  <th>Order Date</th>
-                  <th>Delivery Date</th>
-                  <th>Status</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((o) => (
-                  <tr key={o.id}>
-                    <td>
-                      <div className="text-sm font-semibold text-gray-900 max-w-[140px] truncate">
-                        {o.product_name}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {o.source === 'shopify' ? '🛍 Shopify' : '🏢 CRM'}
-                        {o.is_repeat ? ' · Repeat' : ''}
-                      </div>
-                    </td>
-                    <td>
-                      <div className="text-sm font-medium">{o.customer_name || o.lead_name || '—'}</div>
-                      <div className="text-xs text-gray-500">{o.lead_phone}</div>
-                    </td>
-                    <td className="text-xs text-gray-600">{o.agent_name || '—'}</td>
-                    <td className="text-sm font-bold text-forest-DEFAULT">{fmtINR(o.amount)}</td>
-                    <td>
-                      {o.payment_status ? (
-                        <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full uppercase
-                          ${PAYMENT_COLORS[o.payment_status] || 'bg-gray-100 text-gray-600'}`}>
-                          {o.payment_status}
-                        </span>
-                      ) : <span className="text-gray-300 text-xs">—</span>}
-                    </td>
-                    <td className="text-xs text-gray-600 font-mono">
-                      {o.tracking_id || <span className="text-gray-300">—</span>}
-                    </td>
-                    <td className="text-xs text-gray-500">{fmtDate(o.order_date)}</td>
-                    <td className="text-xs text-gray-500">
-                      {o.delivery_date ? fmtDate(o.delivery_date) : '—'}
-                    </td>
-                    <td>
-                      <span className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full
-                        ${STATUS_COLORS[o.status] || 'bg-gray-100 text-gray-600'}`}>
-                        {o.status}
-                      </span>
-                    </td>
-                    <td>
-                      {/* Update button — sirf pending aur dispatched par */}
-                      {['pending', 'dispatched'].includes(o.status) && (
-                        <button className="btn btn-outline btn-xs" onClick={() => openUpdate(o)}>
-                          Update
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {!loading && pages > 1 && (
-          <Pagination page={page} pages={pages} total={total} limit={LIMIT} onChange={setPage} />
-        )}
+      <div className="tab-nav mb-5">
+        {TABS.map(({ key, label }) => (
+          <button key={key} className={`tab-btn ${tab === key ? 'active' : ''}`} onClick={() => setTab(key as Tab)}>{label}</button>
+        ))}
       </div>
 
-      {/* Update order modal */}
-      {updateModal && (
-        <Modal open onClose={() => setUpdateModal(null)} title={`Update Order — ${updateModal.product_name}`}
-          footer={
-            <>
-              <button className="btn btn-outline" onClick={() => setUpdateModal(null)} disabled={updateSaving}>
-                Cancel
-              </button>
-              <button className="btn btn-amber" onClick={saveUpdate} disabled={updateSaving}>
-                {updateSaving ? <Spinner size={14} /> : 'Save Update'}
-              </button>
-            </>
-          }
-        >
-          <div className="space-y-4">
-            {/* Status to change to */}
+      {loading ? <div className="h-64 skeleton rounded-xl" /> : (
+        <>
+          {/* Revenue tab */}
+          {tab === 'revenue' && data && (
             <div>
-              <label className="form-label">Status Update karo <span className="text-red-500">*</span></label>
-              <div className="flex gap-2 flex-wrap mt-1">
-                {/* pending → dispatched ya cancelled */}
-                {updateModal.status === 'pending' && (
-                  <>
-                    <button type="button"
-                      onClick={() => setUpdateForm(f => ({ ...f, new_status: 'dispatched' }))}
-                      className={`px-4 py-2 rounded-lg text-xs font-bold border-2 transition-all
-                        ${updateForm.new_status === 'dispatched'
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-gray-200 text-gray-400'}`}>
-                      🚚 Dispatched
-                    </button>
-                    <button type="button"
-                      onClick={() => setUpdateForm(f => ({ ...f, new_status: 'cancelled' }))}
-                      className={`px-4 py-2 rounded-lg text-xs font-bold border-2 transition-all
-                        ${updateForm.new_status === 'cancelled'
-                          ? 'border-orange-500 bg-orange-50 text-orange-700'
-                          : 'border-gray-200 text-gray-400'}`}>
-                      ❌ Cancelled
-                    </button>
-                  </>
-                )}
-                {/* dispatched → delivered ya cancelled */}
-                {updateModal.status === 'dispatched' && (
-                  <>
-                    <button type="button"
-                      onClick={() => setUpdateForm(f => ({ ...f, new_status: 'delivered' }))}
-                      className={`px-4 py-2 rounded-lg text-xs font-bold border-2 transition-all
-                        ${updateForm.new_status === 'delivered'
-                          ? 'border-green-500 bg-green-50 text-green-700'
-                          : 'border-gray-200 text-gray-400'}`}>
-                      ✅ Delivered
-                    </button>
-                    <button type="button"
-                      onClick={() => setUpdateForm(f => ({ ...f, new_status: 'cancelled' }))}
-                      className={`px-4 py-2 rounded-lg text-xs font-bold border-2 transition-all
-                        ${updateForm.new_status === 'cancelled'
-                          ? 'border-orange-500 bg-orange-50 text-orange-700'
-                          : 'border-gray-200 text-gray-400'}`}>
-                      ❌ Cancelled
-                    </button>
-                  </>
-                )}
+              <div className="grid grid-cols-3 gap-3 mb-5">
+                {[
+                  { label:'Total Revenue',  value: fmtINR(data.summary?.total || 0) },
+                  { label:'Total Orders',   value: data.summary?.cnt || 0 },
+                  { label:'Avg. Order Value', value: fmtINR(data.summary?.cnt ? Math.round(data.summary.total / data.summary.cnt) : 0) },
+                ].map((m) => (
+                  <div key={m.label} className="card p-4">
+                    <div className="text-xs text-gray-500 mb-1">{m.label}</div>
+                    <div className="font-display text-2xl font-semibold text-forest-DEFAULT">{m.value}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="card">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                  <span className="text-sm font-semibold text-forest-DEFAULT">Revenue by Month</span>
+                </div>
+                <div className="p-4" style={{ height: 280 }}>
+                  <Bar
+                    data={{
+                      labels: (data.data || []).map((m: any) => `${MONTHS[m.mo-1]} ${m.yr}`),
+                      datasets: [{
+                        label: 'Revenue (₹)',
+                        data: (data.data || []).map((m: any) => Number(m.revenue)),
+                        backgroundColor: 'rgba(22,43,32,0.12)', borderColor: '#162B20',
+                        borderWidth: 2, borderRadius: 6,
+                        hoverBackgroundColor: 'rgba(22,43,32,0.22)',
+                      }],
+                    }}
+                    options={{
+                      responsive: true, maintainAspectRatio: false,
+                      plugins: { legend: { display: false }, tooltip: { backgroundColor:'#0D2018', padding:10, cornerRadius:8, displayColors:false, callbacks:{label:(c)=>' '+fmtINR(c.parsed.y)} } },
+                      scales: { x:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af'}}, y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:10},color:'#9ca3af',callback:(v)=>fmtINR(Number(v))}} },
+                    }}
+                  />
+                </div>
               </div>
             </div>
+          )}
 
-            {/* Dispatched fields */}
-            {updateForm.new_status === 'dispatched' && (
-              <>
-                <div>
-                  <label className="form-label">Dispatch Date <span className="text-red-500">*</span></label>
-                  <input type="date" className="form-input"
-                    value={updateForm.dispatch_date}
-                    max={new Date().toISOString().split('T')[0]}
-                    onChange={(e) => setUpdateForm(f => ({ ...f, dispatch_date: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="form-label">Tracking ID</label>
-                  <input className="form-input" value={updateForm.tracking_id}
-                    onChange={(e) => setUpdateForm(f => ({ ...f, tracking_id: e.target.value }))}
-                    placeholder="e.g. DTDC1234567890" />
-                </div>
-                <div>
-                  <label className="form-label">Courier</label>
-                  <input className="form-input" value={updateForm.courier}
-                    onChange={(e) => setUpdateForm(f => ({ ...f, courier: e.target.value }))}
-                    placeholder="e.g. DTDC, BlueDart, Delhivery" />
-                </div>
-              </>
-            )}
-
-            {/* Delivered fields */}
-            {updateForm.new_status === 'delivered' && (
-              <>
-                <div>
-                  <label className="form-label">Delivery Date <span className="text-red-500">*</span></label>
-                  <input type="date" className="form-input"
-                    value={updateForm.delivery_date}
-                    max={new Date().toISOString().split('T')[0]}
-                    onChange={(e) => setUpdateForm(f => ({ ...f, delivery_date: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="form-label">Tracking ID (agar nahi daala)</label>
-                  <input className="form-input" value={updateForm.tracking_id}
-                    onChange={(e) => setUpdateForm(f => ({ ...f, tracking_id: e.target.value }))}
-                    placeholder="e.g. DTDC1234567890" />
-                </div>
-              </>
-            )}
-
-            {/* Cancelled fields */}
-            {updateForm.new_status === 'cancelled' && (
-              <div>
-                <label className="form-label">Cancellation Date <span className="text-red-500">*</span></label>
-                <input type="date" className="form-input"
-                  value={updateForm.cancelled_date}
-                  max={new Date().toISOString().split('T')[0]}
-                  onChange={(e) => setUpdateForm(f => ({ ...f, cancelled_date: e.target.value }))} />
+          {/* Team tab */}
+          {tab === 'team' && (
+            <div className="card">
+              <div className="px-4 py-3 border-b border-gray-100">
+                <span className="text-sm font-semibold text-forest-DEFAULT">Team Performance</span>
               </div>
-            )}
-          </div>
-        </Modal>
+              <div className="overflow-x-auto">
+                <table className="data-table">
+                  <thead>
+                    <tr><th>Agent</th><th>Leads</th><th>New</th><th>In Process</th><th>Follow-up</th><th>CNR</th><th>Dead</th><th>Converted</th><th>Delivered</th><th>Revenue</th><th>Conv. Rate</th><th>Lost</th></tr>
+                  </thead>
+                  <tbody>
+                    {(data?.performance || []).map((u: any) => (
+                      <tr key={u.id}>
+                        <td>
+                          <div className="flex items-center gap-2.5">
+                            <Avatar name={u.name} size={28} />
+                            <div>
+                              <div className="text-sm font-semibold">{u.name}</div>
+                              <div className="text-xs text-gray-500">{u.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="font-semibold">{u.total_leads}</td>
+                        <td>{u.new_cnt || 0}</td>
+                        <td>{u.in_process || 0}</td>
+                        <td>{u.follow_up || 0}</td>
+                        <td>{u.cnr || 0}</td>
+                        <td>{u.dead || 0}</td>
+                        <td>{u.converted}</td>
+                        <td>{u.delivered}</td>
+                        <td className="font-bold text-forest-DEFAULT">{fmtINR(u.revenue)}</td>
+                        <td>
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                              <div className="h-full rounded-full" style={{ width:`${u.conversion_rate||0}%`, background: avatarColor(u.name) }} />
+                            </div>
+                            <span className="text-xs text-gray-600">{u.conversion_rate || 0}%</span>
+                          </div>
+                        </td>
+                        <td>{u.closed_lost}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Campaigns tab */}
+          {tab === 'campaigns' && (
+            <div className="card">
+              <div className="px-4 py-3 border-b border-gray-100">
+                <span className="text-sm font-semibold text-forest-DEFAULT">Campaign Performance</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="data-table">
+                  <thead>
+                    <tr><th>Campaign</th><th>Platform</th><th>Status</th><th>Leads</th><th>Converted</th><th>Revenue</th><th>Conv. Rate</th></tr>
+                  </thead>
+                  <tbody>
+                    {(data?.data || []).length === 0 && <tr><td colSpan={7} className="py-8 text-center text-gray-400 text-sm">No campaign data</td></tr>}
+                    {(data?.data || []).map((c: any) => (
+                      <tr key={c.id}>
+                        <td className="font-medium">{c.name}</td>
+                        <td><span className="badge bg-indigo-50 text-indigo-700">{c.platform}</span></td>
+                        <td><span className={`badge ${c.status==='active'?'badge-converted':c.status==='paused'?'badge-in_process':'badge-closed_lost'}`}>{c.status}</span></td>
+                        <td>{c.total_leads}</td>
+                        <td>{c.converted}</td>
+                        <td className="font-bold text-forest-DEFAULT">{fmtINR(c.revenue)}</td>
+                        <td className={`font-semibold ${Number(c.conversion_rate)>40?'text-green-700':Number(c.conversion_rate)>20?'text-amber-700':'text-red-600'}`}>{c.conversion_rate || 0}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Incentives tab */}
+          {tab === 'incentives' && (
+            <div>
+              <div className="grid grid-cols-3 gap-3 mb-5">
+                {['pending','approved','paid'].map((s) => {
+                  // const item = (data?.summary || []).find((i:any) => i.status === s);
+                  const summaryArr = Array.isArray(data?.summary) ? data.summary : [];
+                  const item = summaryArr.find((i:any) => i.status === s);
+                  return (
+                    <div key={s} className="card p-4">
+                      <div className="text-xs text-gray-500 capitalize mb-1">{s} Incentives</div>
+                      <div className="font-display text-2xl font-semibold text-forest-DEFAULT">{fmtINR(item?.total || 0)}</div>
+                      <div className="text-xs text-gray-400 mt-0.5">{item?.cnt || 0} orders</div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="card">
+                <div className="px-4 py-3 border-b border-gray-100"><span className="text-sm font-semibold text-forest-DEFAULT">Incentive Ledger</span></div>
+                <div className="overflow-x-auto">
+                  <table className="data-table">
+                    <thead>
+                      <tr><th>Agent</th><th>Lead</th><th>Product</th><th>Order Amt</th><th>Rate</th><th>Incentive</th><th>Status</th></tr>
+                    </thead>
+                    <tbody>
+                      {(data?.incentives || []).map((i: any) => (
+                        <tr key={i.id}>
+                          <td className="font-medium">{i.user_name}</td>
+                          <td className="text-xs text-gray-600">{i.lead_name}</td>
+                          <td className="text-xs text-gray-600 max-w-[100px] truncate">{i.product_name}</td>
+                          <td>{fmtINR(i.order_amount)}</td>
+                          <td>{i.rate}%</td>
+                          <td className="font-bold text-forest-DEFAULT">{fmtINR(i.incentive_amount)}</td>
+                          <td><span className={`badge ${i.status==='paid'?'badge-converted':i.status==='approved'?'badge-new':'badge-in_process'}`}>{i.status}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
