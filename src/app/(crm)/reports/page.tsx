@@ -78,8 +78,31 @@ export default function ReportsPage() {
           <input type="date" className="form-input text-xs py-1.5" value={filters.end_date}   onChange={(e) => setFilters(f=>({...f,end_date:e.target.value}))} />
           <button className="btn btn-outline btn-sm text-xs" onClick={load}>Apply</button>
           {/* ✅ Fix 2 — Export with user filter */}
-          <button className="btn btn-outline btn-sm text-xs" onClick={() => reportsAPI.export({ format: 'excel', ...filters, ...(selectedUser ? { assigned_to: selectedUser } : {}) })}>↓ Excel</button>
-          <button className="btn btn-outline btn-sm text-xs" onClick={() => reportsAPI.export({ format: 'csv', ...filters, ...(selectedUser ? { assigned_to: selectedUser } : {}) })}>↓ CSV</button>
+          {/* <button className="btn btn-outline btn-sm text-xs" onClick={() => reportsAPI.export({ format: 'excel', ...filters, ...(selectedUser ? { assigned_to: selectedUser } : {}) })}>↓ Excel</button>
+          <button className="btn btn-outline btn-sm text-xs" onClick={() => reportsAPI.export({ format: 'csv', ...filters, ...(selectedUser ? { assigned_to: selectedUser } : {}) })}>↓ CSV</button> */}
+        <button
+  className="btn btn-outline btn-sm text-xs"
+  onClick={() =>
+    reportsAPI.export({
+      format: 'excel',
+      ...filters
+    })
+  }
+>
+  ↓ Excel
+</button>
+
+<button
+  className="btn btn-outline btn-sm text-xs"
+  onClick={() =>
+    reportsAPI.export({
+      format: 'csv',
+      ...filters
+    })
+  }
+>
+  ↓ CSV
+</button>
         </div>
       </div>
 
