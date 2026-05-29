@@ -140,6 +140,7 @@ export default function PipelinePage() {
       if (toStatus === 'delivered') {
         payload.delivery_date = deliveryDate;
         if (trackingId) payload.tracking_id = trackingId;
+        if (remark)     payload.remark = remark; 
       }
 
       if (toStatus === 'cancelled') {
@@ -385,6 +386,9 @@ function PipelineColumn({
                       <span className={`text-[10.5px] font-bold ${lead.order_amount ? 'text-forest-DEFAULT' : 'text-gray-300'}`}>
                         {lead.order_amount ? fmtINR(lead.order_amount) : 'No amt'}
                       </span>
+                      {/* <span className={`text-[10.5px] font-bold ${lead.total_delivered_amount ? 'text-forest-DEFAULT' : 'text-gray-300'}`}>
+                        {lead.total_delivered_amount ? fmtINR(lead.total_delivered_amount) : 'No amt'}
+                      </span> */}
                     </div>
                     {/* Close date */}
                     {lead.close_date && (
