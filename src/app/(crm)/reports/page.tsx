@@ -82,27 +82,26 @@ export default function ReportsPage() {
           <button className="btn btn-outline btn-sm text-xs" onClick={() => reportsAPI.export({ format: 'csv', ...filters, ...(selectedUser ? { assigned_to: selectedUser } : {}) })}>↓ CSV</button> */}
         <button
   className="btn btn-outline btn-sm text-xs"
-  onClick={() =>
-    reportsAPI.export({
-      format: 'excel',
-      ...filters
-    })
-  }
->
-  ↓ Excel
-</button>
+  onClick={() => {
+    // ✅ Empty values filter karo
+    const p: Record<string, string> = { format: 'excel' };
+    if (filters.start_date)  p.start_date  = filters.start_date;
+    if (filters.end_date)    p.end_date    = filters.end_date;
+    if (filters.assigned_to) p.assigned_to = filters.assigned_to;
+    reportsAPI.export(p);
+  }}
+>↓ Excel</button>
 
 <button
   className="btn btn-outline btn-sm text-xs"
-  onClick={() =>
-    reportsAPI.export({
-      format: 'csv',
-      ...filters
-    })
-  }
->
-  ↓ CSV
-</button>
+  onClick={() => {
+    const p: Record<string, string> = { format: 'csv' };
+    if (filters.start_date)  p.start_date  = filters.start_date;
+    if (filters.end_date)    p.end_date    = filters.end_date;
+    if (filters.assigned_to) p.assigned_to = filters.assigned_to;
+    reportsAPI.export(p);
+  }}
+>↓ CSV</button> 
         </div>
       </div>
 
