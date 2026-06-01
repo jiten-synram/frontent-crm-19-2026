@@ -191,6 +191,10 @@ export const teamAPI = {
     api.delete('/team/assign-category', { data }),
   resetIndex: (category: string) =>
     api.patch(`/team/reset-index/${encodeURIComponent(category)}`),
+  getPoolMembers: (category: string) =>   // ✅ ye add karo
+    api.get('/team/pool-members', { params: { category } }),
+  getUserCategories: (userId: number) =>
+    api.get(`/team/user-categories/${userId}`),
 };
 
 // ── INTEGRATIONS ──────────────────────────────────────────────────────
