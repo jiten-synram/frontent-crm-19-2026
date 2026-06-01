@@ -209,7 +209,12 @@ export default function TeamPage() {
       await teamAPI.addToPool({ user_id: userId, category });
       toast.success('Added to pool');
       // ✅ Local state update — reload ki zaroorat nahi
-      setPoolMemberIds(prev => new Set([...prev, userId]));
+      // setPoolMemberIds(prev => new Set([...prev, userId]));
+      setPoolMemberIds(prev => {
+        const next = new Set<number>(Array.from(prev));
+        next.add(userId);
+        return next;
+      });
       await loadAll();
     } catch (e: any) { toast.error(e?.message || 'Failed'); }
   };
