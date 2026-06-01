@@ -47,6 +47,7 @@ export default function TeamPage() {
   // RR pool modal
   const [poolModal, setPoolModal]   = useState<{ open: boolean; category: string } | null>(null);
   const [poolUsers, setPoolUsers]   = useState<User[]>([]);
+  const [poolMemberIds, setPoolMemberIds] = useState<Set<number>>(new Set());
   const [resetSaving, setResetSaving] = useState<string>('');
 
   useEffect(() => {
@@ -82,7 +83,7 @@ export default function TeamPage() {
   };
 
   const openCreate = () => { setForm(INITIAL_FORM); setFormErrors({}); setUserModal({ open: true, editing: null }); };
-  const openEdit   = (u: User) => {
+  const openEdit   = async (u: User) => {
     setForm({
       name: u.name, email: u.email, phone: u.phone, password: '',
       role: u.role, incentive_rate: String(u.incentive_rate || 0),
@@ -90,6 +91,17 @@ export default function TeamPage() {
     });
     setFormErrors({});
     setUserModal({ open: true, editing: u });
+
+    // ✅ Categories fetch karo
+    if (u.role === 'sales') {
+      try {
+        const res: any = await teamAPI.getUserCategories(u.id);
+        setForm(f => ({ ...f, categories: res?.categories || [] }));
+      } catch {
+        // silent fail
+      }
+    }
+    
   };
 
   const validateForm = () => {
@@ -152,16 +164,52 @@ export default function TeamPage() {
     finally { setDeactivateSaving(false); }
   };
 
+  // const openPoolModal = async (category: string) => {
+  //   const allUsers = users.filter(u => u.role === 'sales' && u.is_active);
+  //   setPoolUsers(allUsers);
+  //   setPoolModal({ open: true, category });
+  // };
+
+  // const addToPool = async (userId: number, category: string) => {
+  //   try {
+  //     await teamAPI.addToPool({ user_id: userId, category });
+  //     toast.success('Added to pool');
+  //     await loadAll();
+  //   } catch (e: any) { toast.error(e?.message || 'Failed'); }
+  // };
+
+  // const removeFromPool = async (userId: number, category: string) => {
+  //   try {
+  //     await teamAPI.removeFromPool({ user_id: userId, category });
+  //     toast.success('Removed from pool');
+  //     await loadAll();
+  //   } catch (e: any) { toast.error(e?.message || 'Failed'); }
+  // };
+
   const openPoolModal = async (category: string) => {
-    const allUsers = users.filter(u => u.role === 'sales' && u.is_active);
-    setPoolUsers(allUsers);
-    setPoolModal({ open: true, category });
+      const allUsers = users.filter(u => u.role === 'sales' && u.is_active);
+      setPoolUsers(allUsers);
+
+      // ✅ Current pool members find karo RR data se
+      const rrRow = rr.find(r => r.category === category);
+      // Backend se pool members fetch karo
+      try {
+        const res: any = await teamAPI.getPoolMembers(category);
+        const ids = new Set<number>((res?.members || []).map((m: any) => m.id));
+        setPoolMemberIds(ids);
+      } catch {
+        setPoolMemberIds(new Set());
+      }
+
+      setPoolModal({ open: true, category });
   };
 
   const addToPool = async (userId: number, category: string) => {
     try {
       await teamAPI.addToPool({ user_id: userId, category });
       toast.success('Added to pool');
+      // ✅ Local state update — reload ki zaroorat nahi
+      setPoolMemberIds(prev => new Set([...prev, userId]));
       await loadAll();
     } catch (e: any) { toast.error(e?.message || 'Failed'); }
   };
@@ -170,6 +218,12 @@ export default function TeamPage() {
     try {
       await teamAPI.removeFromPool({ user_id: userId, category });
       toast.success('Removed from pool');
+      // ✅ Local state update
+      setPoolMemberIds(prev => {
+        const s = new Set(prev);
+        s.delete(userId);
+        return s;
+      });
       await loadAll();
     } catch (e: any) { toast.error(e?.message || 'Failed'); }
   };
@@ -389,27 +443,65 @@ export default function TeamPage() {
       </Modal>
 
       {/* Pool modal */}
-      {poolModal?.open && (
-        <Modal open title={`Manage Pool — ${poolModal.category}`} onClose={() => setPoolModal(null)} size="sm">
-          <p className="text-xs text-gray-500 mb-3">Toggle sales agents to add/remove from this category pool.</p>
-          {poolUsers.map((u) => {
-            const inPool = rr.find(r => r.category === poolModal.category);
-            return (
-              <div key={u.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-                <div className="flex items-center gap-2">
-                  <Avatar name={u.name} size={26} />
-                  <span className="text-sm font-medium">{u.name}</span>
-                </div>
-                <div className="flex gap-2">
-                  <button className="btn btn-primary btn-xs" onClick={() => addToPool(u.id, poolModal.category)}>+ Add</button>
-                  <button className="btn btn-danger btn-xs" onClick={() => removeFromPool(u.id, poolModal.category)}>Remove</button>
+      {/* Pool modal */}
+    {poolModal?.open && (
+      <Modal open title={`Manage Pool — ${poolModal.category}`} onClose={() => setPoolModal(null)} size="sm">
+        <p className="text-xs text-gray-500 mb-3">
+          Pool mein agents add/remove karo — Round Robin inhe assign karega.
+        </p>
+        {poolUsers.map((u) => {
+          const inPool = poolMemberIds.has(u.id); // ✅ already in pool check
+
+          return (
+            <div key={u.id} className="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-0">
+              {/* Agent info */}
+              <div className="flex items-center gap-2">
+                <Avatar name={u.name} size={26} />
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-medium">{u.name}</span>
+                    {inPool && (
+                      <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-bold">
+                        ✓ IN POOL
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-400">{u.designation || u.role}</div>
                 </div>
               </div>
-            );
-          })}
-          <button className="btn btn-outline w-full mt-4" onClick={() => setPoolModal(null)}>Close</button>
-        </Modal>
-      )}
+
+              {/* Action buttons */}
+              <div className="flex gap-1.5">
+                {/* Add button — active sirf jab NOT in pool */}
+                <button
+                  className={`btn btn-xs px-3 py-1 rounded-lg text-xs font-semibold border transition-all ${
+                    inPool
+                      ? 'border-gray-200 bg-gray-50 text-gray-300 cursor-not-allowed'
+                      : 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100'
+                  }`}
+                  disabled={inPool}
+                  onClick={() => !inPool && addToPool(u.id, poolModal.category)}>
+                  {inPool ? '✓ Added' : '+ Add'}
+                </button>
+
+                {/* Remove button — active sirf jab IN pool */}
+                <button
+                  className={`btn btn-xs px-3 py-1 rounded-lg text-xs font-semibold border transition-all ${
+                    !inPool
+                      ? 'border-gray-200 bg-gray-50 text-gray-300 cursor-not-allowed'
+                      : 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100'
+                  }`}
+                  disabled={!inPool}
+                  onClick={() => inPool && removeFromPool(u.id, poolModal.category)}>
+                  Remove
+                </button>
+              </div>
+            </div>
+          );
+        })}
+        <button className="btn btn-outline w-full mt-4" onClick={() => setPoolModal(null)}>Close</button>
+      </Modal>
+    )}
 
       {/* Deactivate confirm */}
       <ConfirmDialog
