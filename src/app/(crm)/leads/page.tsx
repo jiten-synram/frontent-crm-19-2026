@@ -430,7 +430,7 @@ export default function LeadsPage() {
                   <th>Source</th>
                   <th>Status</th>
                   <th>Assigned To</th>
-                  <th>Amount</th>
+                  <th>Campaing</th>
                   <th>Date</th>
                   <th>Remark</th>
                   <th></th>
@@ -474,8 +474,11 @@ export default function LeadsPage() {
                       </div>
                     </td>
 
-                    <td className={`text-sm font-semibold ${lead.order_amount ? 'text-forest-DEFAULT' : 'text-gray-300'}`}>
+                    {/* <td className={`text-sm font-semibold ${lead.order_amount ? 'text-forest-DEFAULT' : 'text-gray-300'}`}>
                       {lead.order_amount ? fmtINR(lead.order_amount) : '—'}
+                    </td> */}
+                    <td className="text-xs text-gray-500">
+                      {lead.campaign_name || '—'}
                     </td>
 
                     <td className="text-xs text-gray-400">
