@@ -3,7 +3,8 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { leadsAPI, authAPI } from '@/lib/api';
+// import { leadsAPI, authAPI } from '@/lib/api';
+import { leadsAPI, authAPI, reportsAPI } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { StatusBadge, SourceBadge, Avatar, Pagination, Empty, Skeleton, SearchInput } from '@/components/ui';
 import NewLeadModal from '@/components/leads/NewLeadModal';
@@ -107,6 +108,8 @@ export default function LeadsPage() {
   const [startDate,     setStartDate]     = useState<string>('');
   const [endDate,       setEndDate]       = useState<string>('');
   const [users,         setUsers]         = useState<any[]>([]);
+  const [campaigns,     setCampaigns]     = useState<any[]>([]);
+  const [campaignId,    setCampaignId]    = useState<string>('');
   const [selected,      setSelected]      = useState<Set<number>>(new Set());
   const [exporting,     setExporting]     = useState(false);
 
@@ -124,6 +127,11 @@ export default function LeadsPage() {
         .then((d: any) => setUsers(d?.users || []))
         .catch(() => {});
     }
+        // Campaigns load karo — admin + sales dono ke liye
+      reportsAPI.campaignsList()
+        .then((d: any) => setCampaigns(d?.campaigns || []))
+        .catch(() => {});
+
   }, []);
 
   const load = useCallback(async () => {
@@ -135,6 +143,7 @@ export default function LeadsPage() {
       if (source)     params.source      = source;
       if (category)   params.category    = category;
       if (assignedTo) params.assigned_to = assignedTo;
+      if (campaignId) params.campaign_id  = campaignId;
       if (startDate)  params.start_date  = startDate;
       if (endDate)    params.end_date    = endDate;
 
@@ -157,7 +166,7 @@ export default function LeadsPage() {
       setTotal(res?.total || 0);
     } catch { toast.error('Failed to load leads'); }
     finally  { setLoading(false); }
-  }, [page, search, status, source, category, assignedTo, startDate, endDate, showDelivered]);
+  }, [page, search, status, source, category, assignedTo, campaignId, startDate, endDate, showDelivered]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -183,9 +192,10 @@ export default function LeadsPage() {
 
   const clearFilters = () => {
     setStatus(''); setSource(''); setCategory('');
-    setAssignedTo(''); setStartDate(''); setEndDate('');
+    setAssignedTo(''); setCampaignId(''); setStartDate(''); setEndDate('');
     setSearch(''); setShowDelivered(false); setPage(1);
   };
+  
 
   const toggleSelect = (id: number) => {
     setSelected(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
@@ -225,7 +235,8 @@ export default function LeadsPage() {
   };
 
   const pages      = Math.ceil(total / LIMIT);
-  const hasFilters = status || source || category || assignedTo || startDate || endDate || search || showDelivered;
+  // const hasFilters = status || source || category || assignedTo || startDate || endDate || search || showDelivered;
+  const hasFilters = status || source || category || assignedTo || campaignId || startDate || endDate || search || showDelivered;
 
   return (
     <div>
@@ -347,13 +358,25 @@ export default function LeadsPage() {
               value={endDate} onChange={(e) => { setEndDate(e.target.value); setPage(1); }} />
           </div>
 
-          {/* Row 3 — Source + Agent + Clear */}
+          {/* Row 3 — Source + campaign + Agent + Clear */}
           <div className="flex items-center gap-2 flex-wrap">
             <select className="form-select text-xs max-w-[130px]" value={source}
               onChange={(e) => { setSource(e.target.value); setPage(1); }}>
               <option value="">All Sources</option>
               {SOURCES.map((s) => <option key={s} value={s}>{SOURCE_CONFIG[s as LeadSource]?.label}</option>)}
             </select>
+            
+            {/* ── Campaign filter ── */}
+            {campaigns.length > 0 && (
+              <select className="form-select text-xs max-w-[160px]" value={campaignId}
+                onChange={(e) => { setCampaignId(e.target.value); setPage(1); }}>
+                <option value="">All Campaigns</option>
+                {campaigns.map((c: any) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            )}
+
             {isAdmin() && (
               <select className="form-select text-xs max-w-[160px]" value={assignedTo}
                 onChange={(e) => { setAssignedTo(e.target.value); setPage(1); }}>
@@ -430,7 +453,7 @@ export default function LeadsPage() {
                   <th>Source</th>
                   <th>Status</th>
                   <th>Assigned To</th>
-                  <th>Campaing</th>
+                  <th>Campaign</th>
                   <th>Date</th>
                   <th>Remark</th>
                   <th></th>
