@@ -164,6 +164,7 @@ export default function LeadDetailPage() {
                 <InfoRow label="Assigned To" value={lead.assigned_name} />
                 <InfoRow label="Follow-up"   value={lead.next_followup_at ? fmtDateTime(lead.next_followup_at) : undefined} />
                 <InfoRow label="Created"     value={fmtDateTime(lead.created_at)} />
+                <InfoRow label="Campaign"    value={lead.campaign_name || '—'} />
               </div>
             </div>
           </div>
