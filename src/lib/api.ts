@@ -83,6 +83,7 @@ export const authAPI = {
     api.patch(`/auth/users/${id}`, data),
   changePassword: (data: { currentPassword: string; newPassword: string }) =>
     api.patch('/auth/change-password', data),
+  getMyCategories: () => api.get('/auth/my-categories'),
 };
 
 // ── LEADS ─────────────────────────────────────────────────────────────
@@ -153,6 +154,7 @@ export const reportsAPI = {
   campaigns: () => api.get('/reports/campaign-performance'),
   incentives: (params?: Record<string, unknown>) =>
     api.get('/reports/incentives', { params }),
+  campaignsList: () => api.get('/reports/campaigns-list'),
   // export: (params: Record<string, unknown>) => {
   //   const token = localStorage.getItem('access_token');
   //   const qs = new URLSearchParams(params as Record<string, string>).toString();
