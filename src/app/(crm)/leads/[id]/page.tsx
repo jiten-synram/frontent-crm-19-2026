@@ -94,7 +94,7 @@ export default function LeadDetailPage() {
     try {
       await integrationsAPI.sendWA({
         phone: lead.phone,
-        message: `Namaste ${lead.name}! 🙏 This is a follow-up from Yogveda Healthcare regarding your ${lead.category} treatment inquiry. Our specialist will assist you shortly.`,
+        message: `Hello ${lead.name}! 🙏 This is a follow-up from Yogveda Healthcare regarding your ${lead.category} treatment inquiry. Our specialist will assist you shortly.`,
       });
       toast.success('WhatsApp message sent!');
     } catch (e: any) { toast.error(e?.message || 'WhatsApp not configured'); }
