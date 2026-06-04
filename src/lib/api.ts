@@ -130,6 +130,8 @@ export const customersAPI = {
   lookup: (params: { phone?: string; email?: string }) =>
     api.get('/customers/lookup', { params }),
   get: (id: number) => api.get(`/customers/${id}`),
+  update: (id: number, data: Record<string, unknown>) =>   // ✅ ye add karo
+    api.patch(`/customers/${id}`, data),
   reorder: (id: number, data: Record<string, unknown>) =>
     api.post(`/customers/${id}/reorder`, data),
    // ← YEH NAYI LINE ADD KARO
