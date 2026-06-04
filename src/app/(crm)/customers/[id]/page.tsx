@@ -29,7 +29,8 @@ export default function CustomerDetailPage() {
     shipping_address: '',
     remark: '',
     order_date:       new Date().toISOString().split('T')[0],
-    delivery_date:    '',
+    // delivery_date:    '',
+    dispatched_date:    '',
   });
 
   // Cancel single order modal
@@ -51,7 +52,14 @@ export default function CustomerDetailPage() {
 
   // Reorder modal open karte waqt last purchase se auto-fill
   const openReorder = () => {
-    const purchases = (customer as any)?.purchases as any[] || [];
+    // const purchases = (customer as any)?.purchases as any[] || [];
+    // ✅ AFTER — teeno arrays combine karo, latest pehle
+    const activeOrders    = ((customer as any).activeOrders    || []) as any[];
+    const deliveredOrders = ((customer as any).deliveredOrders || []) as any[];
+    const cancelledOrders = ((customer as any).cancelledOrders || []) as any[];
+
+    // Sab ek saath dikhao — active pehle, phir delivered, phir cancelled
+    const allOrders = [...activeOrders, ...deliveredOrders, ...cancelledOrders];
     // Last delivered purchase se details le lo
     const lastOrder = purchases.find(p => p.status === 'delivered') || purchases[0];
     setReorderForm({
@@ -62,7 +70,8 @@ export default function CustomerDetailPage() {
       shipping_address: customer?.shipping_address || '',
       remark: '',
       order_date:       new Date().toISOString().split('T')[0],
-      delivery_date:    '',
+      // delivery_date:    '',
+      dispatched_date: '',
     });
     setReorderError('');
     setReorderOpen(true);
@@ -83,7 +92,8 @@ export default function CustomerDetailPage() {
         shipping_address: reorderForm.shipping_address || undefined,
         remark: reorderForm.remark || undefined,
         order_date:       reorderForm.order_date,
-        delivery_date:    reorderForm.delivery_date    || undefined,
+        // delivery_date:    reorderForm.delivery_date    || undefined,
+        dispatched_date: reorderForm.dispatched_date || undefined,
       });
       toast.success('Reorder created!');
       setReorderOpen(false);
@@ -323,7 +333,7 @@ export default function CustomerDetailPage() {
         {/* Auto-fill notice */}
         {reorderForm.product_name && (
           <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 text-xs text-blue-700 mb-3">
-            ✨ Pichle order se auto-fill kiya — zaroorat ho toh change karo
+            ✨ Auto-filled from the previous order — please update if needed.
           </div>
         )}
 
@@ -374,11 +384,18 @@ export default function CustomerDetailPage() {
               onChange={(e) => setReorderForm(f => ({ ...f, order_date: e.target.value }))} />
           </div>
 
-          <div>
+          {/* <div>
             <label className="form-label">Delivery Date <span className="text-xs text-gray-400">(delivered ho gaya ho toh)</span></label>
             <input type="date" className="form-input" value={reorderForm.delivery_date}
               min={new Date().toISOString().split('T')[0]}
               onChange={(e) => setReorderForm(f => ({ ...f, delivery_date: e.target.value }))} />
+          </div> */}
+
+          <div>
+            <label className="form-label">Dispatched Date <span className="text-xs text-gray-400">((Optional if already dispatched))</span></label>
+            <input type="date" className="form-input" value={reorderForm.dispatched_date}
+              min={new Date().toISOString().split('T')[0]}
+              onChange={(e) => setReorderForm(f => ({ ...f, dispatched_date: e.target.value }))} />
           </div>
 
           <div className="col-span-2">
@@ -393,7 +410,7 @@ export default function CustomerDetailPage() {
                 onChange={(e) =>
                   setReorderForm(f => ({ ...f, remark: e.target.value }))
                 }
-                placeholder="Delivery / special note..."
+                placeholder="Dispatch details / special note..."
                 rows={2}
               />
           </div>
@@ -436,7 +453,7 @@ export default function CustomerDetailPage() {
             </div>
             {cancelOrder.status === 'delivered' && (
               <div className="mt-2 text-xs text-orange-600 font-medium bg-orange-50 rounded-lg px-2 py-1.5">
-                ⚠️ Ye order already delivered hai — cancel hone par customer ki revenue adjust hogi
+                ⚠️ This order has already been delivered — customer revenue will be adjusted if it is cancelled.
               </div>
             )}
           </div>
@@ -461,7 +478,7 @@ export default function CustomerDetailPage() {
           </div>
 
           <p className="text-xs text-gray-400 mt-3">
-            ⚡ Sirf yeh ek order cancel hoga — baaki orders safe rahenge
+            ⚡ Only this order will be cancelled — all other orders will remain unchanged.
           </p>
         </Modal>
       )}
