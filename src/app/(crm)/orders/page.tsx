@@ -4,6 +4,7 @@
 // Status filters: pending | dispatched | delivered | cancelled
 
 import { useEffect, useState, useCallback } from 'react';
+import Link from 'next/link';
 import { ordersAPI } from '@/lib/api';
 import { Avatar, Pagination, Empty, Skeleton, Modal, Spinner } from '@/components/ui';
 import { fmtINR, fmtDate } from '@/lib/utils';
@@ -46,7 +47,7 @@ const [exporting,     setExporting]     = useState(false);
   const [updateModal,  setUpdateModal]  = useState<Order | null>(null);
   const [updateForm,   setUpdateForm]   = useState({
     tracking_id: '', courier: '', dispatch_date: '',
-    delivery_date: '', cancelled_date: '', new_status: '' as OrderStatus | '',
+    delivery_date: '', cancelled_date: '', new_status: '' as OrderStatus | '', remark: '',
   });
   const [updateSaving, setUpdateSaving] = useState(false);
 
@@ -78,6 +79,7 @@ const [exporting,     setExporting]     = useState(false);
       delivery_date: '',
       cancelled_date: '',
       new_status: '',
+      remark: '',
     });
   };
 
@@ -105,6 +107,7 @@ const [exporting,     setExporting]     = useState(false);
         dispatch_date:  updateForm.dispatch_date || undefined,
         delivery_date:  updateForm.delivery_date || undefined,
         cancelled_date: updateForm.cancelled_date || undefined,
+        remark:         updateForm.remark          || undefined,
       });
       toast.success('Order updated!');
       setUpdateModal(null);
@@ -243,8 +246,8 @@ const [exporting,     setExporting]     = useState(false);
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Order</th>
                   <th>Customer</th>
+                  <th>Order</th>
                   <th>Agent</th>
                   <th>Amount</th>
                   <th>Payment</th>
@@ -258,6 +261,11 @@ const [exporting,     setExporting]     = useState(false);
               <tbody>
                 {orders.map((o) => (
                   <tr key={o.id}>
+                    <td><Link
+        href={`/customers/${o.customer_id}`}>
+                      <div className="text-sm font-medium">{o.customer_name || o.lead_name || '—'}</div>
+                      <div className="text-xs text-gray-500">{o.lead_phone}</div></Link>
+                    </td>
                     <td>
                       <div className="text-sm font-semibold text-gray-900 max-w-[140px] truncate">
                         {o.product_name}
@@ -266,10 +274,6 @@ const [exporting,     setExporting]     = useState(false);
                         {o.source === 'shopify' ? '🛍 Shopify' : '🏢 CRM'}
                         {o.is_repeat ? ' · Repeat' : ''}
                       </div>
-                    </td>
-                    <td>
-                      <div className="text-sm font-medium">{o.customer_name || o.lead_name || '—'}</div>
-                      <div className="text-xs text-gray-500">{o.lead_phone}</div>
                     </td>
                     <td className="text-xs text-gray-600">{o.agent_name || '—'}</td>
                     <td className="text-sm font-bold text-forest-DEFAULT">{fmtINR(o.amount)}</td>
@@ -400,6 +404,20 @@ const [exporting,     setExporting]     = useState(false);
                     onChange={(e) => setUpdateForm(f => ({ ...f, courier: e.target.value }))}
                     placeholder="e.g. DTDC, BlueDart, Delhivery" />
                 </div>
+                <div>
+                <label className="form-label">Remark</label>
+                <textarea
+                  className="form-textarea"
+                  rows={2}
+                  value={updateForm.remark}
+                  onChange={(e) => setUpdateForm(f => ({ ...f, remark: e.target.value }))}
+                  placeholder={
+                    updateForm.new_status === 'dispatched' ? 'e.g. Courier se dispatch hua...' :
+                    updateForm.new_status === 'delivered'  ? 'e.g. Customer ne receive kiya...' :
+                    'e.g. Cancel karne ki wajah...'
+                  }
+                />
+              </div>
               </>
             )}
 
@@ -419,11 +437,25 @@ const [exporting,     setExporting]     = useState(false);
                     onChange={(e) => setUpdateForm(f => ({ ...f, tracking_id: e.target.value }))}
                     placeholder="e.g. DTDC1234567890" />
                 </div>
+                <div>
+                  <label className="form-label">Remark</label>
+                  <textarea
+                    className="form-textarea"
+                    rows={2}
+                    value={updateForm.remark}
+                    onChange={(e) => setUpdateForm(f => ({ ...f, remark: e.target.value }))}
+                    placeholder={
+                      updateForm.new_status === 'dispatched' ? 'e.g. Courier se dispatch hua...' :
+                      updateForm.new_status === 'delivered'  ? 'e.g. Customer ne receive kiya...' :
+                      'e.g. Cancel karne ki wajah...'
+                    }
+                  />
+                </div>
               </>
             )}
 
             {/* Cancelled fields */}
-            {updateForm.new_status === 'cancelled' && (
+            {/* {updateForm.new_status === 'cancelled' && (
               <div>
                 <label className="form-label">Cancellation Date <span className="text-red-500">*</span></label>
                 <input type="date" className="form-input"
@@ -431,6 +463,43 @@ const [exporting,     setExporting]     = useState(false);
                   max={new Date().toISOString().split('T')[0]}
                   onChange={(e) => setUpdateForm(f => ({ ...f, cancelled_date: e.target.value }))} />
               </div>
+            )} */}
+            {updateForm.new_status === 'cancelled' && (
+              <>
+                <div>
+                  <label className="form-label">
+                    Cancellation Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    value={updateForm.cancelled_date}
+                    max={new Date().toISOString().split('T')[0]}
+                    onChange={(e) =>
+                      setUpdateForm(f => ({
+                        ...f,
+                        cancelled_date: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Remark</label>
+                  <textarea
+                    className="form-textarea"
+                    rows={2}
+                    value={updateForm.remark}
+                    onChange={(e) =>
+                      setUpdateForm(f => ({
+                        ...f,
+                        remark: e.target.value,
+                      }))
+                    }
+                    placeholder="e.g. Cancel karne ki wajah..."
+                  />
+                </div>
+              </>
             )}
           </div>
         </Modal>
