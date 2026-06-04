@@ -42,6 +42,8 @@ export default function OrdersPage() {
   const [statusFilter,  setStatusFilter]  = useState('');
 const [paymentFilter, setPaymentFilter] = useState('');
 const [exporting,     setExporting]     = useState(false);
+  const [dateFrom,      setDateFrom]      = useState('');
+const [dateTo,        setDateTo]        = useState('');
 
   // Update modal — for dispatching / delivering / cancelling
   const [updateModal,  setUpdateModal]  = useState<Order | null>(null);
@@ -61,12 +63,14 @@ const [exporting,     setExporting]     = useState(false);
         page, limit: LIMIT,
         status:         statusFilter  || undefined,
         payment_status: paymentFilter || undefined,
+        date_from:      dateFrom      || undefined, 
+        date_to:        dateTo        || undefined,
       });
       setOrders(res?.orders || []);
       setTotal(res?.total || 0);
     } catch { toast.error('Failed to load orders'); }
     finally { setLoading(false); }
-  }, [page, statusFilter, paymentFilter]);
+  }, [page, statusFilter, paymentFilter, dateFrom, dateTo]);
 
   useEffect(() => { load(); }, [load]);
 
