@@ -349,7 +349,7 @@ export default function CampaignsPage() {
               placeholder="From Meta Ads Manager"
             />
             <p className="text-[10px] text-gray-400 mt-0.5">
-              Make.com mein yeh ID use hogi automatically link karne ke liye
+              This ID will be used by Make.com to automatically link incoming leads to this campaign
             </p>
           </div>
 
@@ -392,12 +392,12 @@ export default function CampaignsPage() {
         {!editing && (
           <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
             <p className="text-xs font-semibold text-amber-800 mb-1">
-              📌 Make.com ke liye — Campaign banane ke baad
+              📌 For Make.com — After creating a campaign
             </p>
             <p className="text-xs text-amber-700">
-              Is campaign ka <strong>ID</strong> note karo (table mein dikhega).
-              Make.com HTTP module mein <code className="bg-amber-100 px-1 rounded">campaign_id</code> field mein woh number daalo.
-              Phir har naye lead pe automatically yeh campaign link hogi.
+              Note the <strong>ID</strong> of this campaign (it will appear in the table).
+              Enter this number in the <code className="bg-amber-100 px-1 rounded">campaign_id</code> field of your Make.com HTTP module.
+              All new leads will then be automatically linked to this campaign.
             </p>
           </div>
         )}
@@ -412,10 +412,10 @@ export default function CampaignsPage() {
             </div>
             <div className="px-6 py-5">
               <p className="text-sm text-gray-700 mb-2">
-                <strong>{deleteConfirm.name}</strong> delete karna chahte ho?
+                Are you sure you want to delete <strong>{deleteConfirm.name}</strong>?
               </p>
               <p className="text-xs text-gray-500">
-                Is campaign ke saare leads unlink ho jaayenge. Yeh action undo nahi hogi.
+                All leads associated with this campaign will be unlinked. This action cannot be undone.
               </p>
             </div>
             <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200">
