@@ -369,7 +369,7 @@ export default function CustomerDetailPage() {
                           :                             'bg-amber-100  text-amber-700'}`}>
                           {p.status}
                         </span>
-                        {p.status !== 'cancelled' && p.order_id && (
+                        /* {p.status !== 'cancelled' && p.order_id && (
                           <button
                             className="text-[9.5px] text-red-400 hover:text-red-600 font-medium border border-red-100 hover:border-red-300 hover:bg-red-50 px-2 py-0.5 rounded-md transition-all"
                             onClick={() => {
@@ -380,7 +380,7 @@ export default function CustomerDetailPage() {
                           >
                             Cancel Order
                           </button>
-                        )}
+                        )} */
                       </div>
                     </div>
                   </div>
@@ -431,7 +431,7 @@ export default function CustomerDetailPage() {
               className={`form-input ${editErrors.name ? 'error' : ''}`}
               value={editForm.name}
               onChange={(e) => setEF('name', e.target.value)}
-              placeholder="Patient full name"
+              placeholder="Patient full name" readonly="true"
             />
             {editErrors.name && <p className="form-error">{editErrors.name}</p>}
           </div>
