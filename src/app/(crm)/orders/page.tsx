@@ -89,7 +89,7 @@ const [dateTo,        setDateTo]        = useState('');
 
   const saveUpdate = async () => {
     if (!updateModal) return;
-    if (!updateForm.new_status) { toast.error('Naya status choose karo'); return; }
+    if (!updateForm.new_status) { toast.error('Please select a new status'); return; }
 
     // Validation
     if (updateForm.new_status === 'dispatched' && !updateForm.dispatch_date) {
@@ -128,7 +128,7 @@ const [dateTo,        setDateTo]        = useState('');
         <div>
           <h1 className="font-display text-2xl font-semibold text-forest-DEFAULT">Orders</h1>
           <p className="text-xs text-gray-500 mt-0.5">
-            {total} orders — Lead convert hone par automatically create hote hain
+            {total} orders — Automatically created when a lead is converted
           </p>
         </div>
       </div>
@@ -274,7 +274,7 @@ const [dateTo,        setDateTo]        = useState('');
           </div>
         ) : orders.length === 0 ? (
           <Empty icon="📦" title="No orders found"
-            description={statusFilter ? `Koi ${statusFilter} order nahi` : 'Lead convert hone par orders aate hain'} />
+            description={statusFilter ? `No ${statusFilter} order found` : 'Orders are automatically created when a lead is converted'} />
         ) : (
           <div className="overflow-x-auto">
             <table className="data-table">
@@ -369,7 +369,7 @@ const [dateTo,        setDateTo]        = useState('');
           <div className="space-y-4">
             {/* Status to change to */}
             <div>
-              <label className="form-label">Status Update karo <span className="text-red-500">*</span></label>
+              <label className="form-label">Update Status <span className="text-red-500">*</span></label>
               <div className="flex gap-2 flex-wrap mt-1">
                 {/* pending → dispatched ya cancelled */}
                 {updateModal.status === 'pending' && (
@@ -462,7 +462,7 @@ const [dateTo,        setDateTo]        = useState('');
                     onChange={(e) => setUpdateForm(f => ({ ...f, delivery_date: e.target.value }))} />
                 </div>
                 <div>
-                  <label className="form-label">Tracking ID (agar nahi daala)</label>
+                  <label className="form-label">Tracking ID (if not already entered)</label>
                   <input className="form-input" value={updateForm.tracking_id}
                     onChange={(e) => setUpdateForm(f => ({ ...f, tracking_id: e.target.value }))}
                     placeholder="e.g. DTDC1234567890" />
