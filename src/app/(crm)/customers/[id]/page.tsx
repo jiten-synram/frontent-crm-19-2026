@@ -431,7 +431,7 @@ export default function CustomerDetailPage() {
               className={`form-input ${editErrors.name ? 'error' : ''}`}
               value={editForm.name}
               onChange={(e) => setEF('name', e.target.value)}
-              placeholder="Patient full name" readonly="true"
+              placeholder="Patient full name" readOnly
             />
             {editErrors.name && <p className="form-error">{editErrors.name}</p>}
           </div>
