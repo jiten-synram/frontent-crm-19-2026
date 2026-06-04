@@ -452,7 +452,7 @@ export default function TeamPage() {
     {poolModal?.open && (
       <Modal open title={`Manage Pool — ${poolModal.category}`} onClose={() => setPoolModal(null)} size="sm">
         <p className="text-xs text-gray-500 mb-3">
-          Pool mein agents add/remove karo — Round Robin inhe assign karega.
+          Add or remove agents from this pool. Round Robin will assign leads to these agents automatically.
         </p>
         {poolUsers.map((u) => {
           const inPool = poolMemberIds.has(u.id); // ✅ already in pool check
