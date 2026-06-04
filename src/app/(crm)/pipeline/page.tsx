@@ -359,7 +359,6 @@ function PipelineColumn({
                 key={String(lead.id)}
                 draggableId={String(lead.id)}
                 index={index}
-                {/* isDragDisabled={isCancelled} */}
                   isDragDisabled={true}
               >
                 {(prov, snap) => (
