@@ -43,11 +43,18 @@ api.interceptors.response.use(
         const refresh = localStorage.getItem('refresh_token');
         if (!refresh) throw new Error('No refresh token');
         const res = await axios.post(`${BASE_URL}/auth/refresh`, { refreshToken: refresh });
-        const newToken = (res.data as any).accessToken;
-        localStorage.setItem('access_token', newToken);
-        refreshQueue.forEach((cb) => cb(newToken));
+        // const newToken = (res.data as any).accessToken;
+        // localStorage.setItem('access_token', newToken);
+        // refreshQueue.forEach((cb) => cb(newToken));
+        // refreshQueue = [];
+        // original.headers.Authorization = `Bearer ${newToken}`;
+        const newAccess  = (res.data as any).accessToken;
+        const newRefresh = (res.data as any).refreshToken;
+        localStorage.setItem('access_token',  newAccess);
+        localStorage.setItem('refresh_token', newRefresh);
+        refreshQueue.forEach((cb) => cb(newAccess));
         refreshQueue = [];
-        original.headers.Authorization = `Bearer ${newToken}`;
+        original.headers.Authorization = `Bearer ${newAccess}`;
         return api(original);
       } catch {
         
