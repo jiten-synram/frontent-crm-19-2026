@@ -175,6 +175,36 @@ const [exporting,     setExporting]     = useState(false);
     </button>
   ))}
 
+  {/* ✅ Date range filter */}
+<span className="text-gray-200 mx-1">|</span>
+<div className="flex items-center gap-1.5">
+  <span className="text-xs text-gray-400">From</span>
+  <input
+    type="date"
+    className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 focus:outline-none focus:border-forest-DEFAULT"
+    value={dateFrom}
+    max={dateTo || new Date().toISOString().split('T')[0]}
+    onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+  />
+  <span className="text-xs text-gray-400">To</span>
+  <input
+    type="date"
+    className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 focus:outline-none focus:border-forest-DEFAULT"
+    value={dateTo}
+    min={dateFrom}
+    max={new Date().toISOString().split('T')[0]}
+    onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+  />
+  {/* Clear button — date select hone par show karo */}
+  {(dateFrom || dateTo) && (
+    <button
+      className="text-[10px] text-gray-400 hover:text-red-500 px-1"
+      onClick={() => { setDateFrom(''); setDateTo(''); setPage(1); }}>
+      ✕ Clear
+    </button>
+  )}
+</div>
+
   {/* ✅ Export button — right side */}
   <div className="ml-auto flex gap-2">
     <button
