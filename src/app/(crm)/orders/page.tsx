@@ -411,11 +411,7 @@ const [exporting,     setExporting]     = useState(false);
                   rows={2}
                   value={updateForm.remark}
                   onChange={(e) => setUpdateForm(f => ({ ...f, remark: e.target.value }))}
-                  placeholder={
-                    updateForm.new_status === 'dispatched' ? 'e.g. Courier se dispatch hua...' :
-                    updateForm.new_status === 'delivered'  ? 'e.g. Customer ne receive kiya...' :
-                    'e.g. Cancel karne ki wajah...'
-                  }
+                  placeholder="e.g. Order dispatched via courier service..."
                 />
               </div>
               </>
@@ -444,11 +440,7 @@ const [exporting,     setExporting]     = useState(false);
                     rows={2}
                     value={updateForm.remark}
                     onChange={(e) => setUpdateForm(f => ({ ...f, remark: e.target.value }))}
-                    placeholder={
-                      updateForm.new_status === 'dispatched' ? 'e.g. Courier se dispatch hua...' :
-                      updateForm.new_status === 'delivered'  ? 'e.g. Customer ne receive kiya...' :
-                      'e.g. Cancel karne ki wajah...'
-                    }
+                    placeholder="e.g. Order successfully received by the customer..."
                   />
                 </div>
               </>
@@ -496,7 +488,7 @@ const [exporting,     setExporting]     = useState(false);
                         remark: e.target.value,
                       }))
                     }
-                    placeholder="e.g. Cancel karne ki wajah..."
+                    placeholder="e.g. Reason for order cancellation..."
                   />
                 </div>
               </>
