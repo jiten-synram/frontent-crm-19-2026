@@ -205,7 +205,7 @@ export default function LeadsPage() {
   };
 
   const bulkExport = async (format: 'excel' | 'csv') => {
-    if (selected.size === 0) { toast.error('Koi lead select nahi kiya!'); return; }
+    if (selected.size === 0) { toast.error('No leads selected!'); return; }
     setExporting(true);
     try {
       const params: Record<string, string> = { format };
@@ -409,7 +409,7 @@ export default function LeadsPage() {
           {showDelivered && (
             <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 flex items-center justify-between">
               <span className="text-xs text-emerald-700 font-semibold">
-                📦 Delivered leads dikh rahe hain — Pipeline se aaye hain
+                📦 Showing delivered leads — moved from the sales pipeline
               </span>
               <button
                 onClick={handleDeliveredToggle}
@@ -428,10 +428,10 @@ export default function LeadsPage() {
         ) : leads.length === 0 ? (
           <Empty
             icon={showDelivered ? '📦' : '🔍'}
-            title={showDelivered ? 'Koi delivered lead nahi' : 'No leads found'}
+            title={showDelivered ? 'No delivered leads found' : 'No leads found'}
             description={showDelivered
-              ? 'Pipeline mein lead ko Converted → Delivered karo'
-              : 'Try adjusting your filters or create a new lead'}
+  ? 'No leads have been marked as Delivered yet.'
+  : 'Try adjusting your filters or create a new lead'}
             action={!showDelivered
               ? <button className="btn btn-amber text-xs" onClick={() => setShowNew(true)}>+ Add Lead</button>
               : undefined}
