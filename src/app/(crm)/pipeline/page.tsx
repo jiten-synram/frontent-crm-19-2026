@@ -76,7 +76,7 @@ export default function PipelinePage() {
     // Check allowed moves
     const allowed = ALLOWED_MOVES[fromStatus] || [];
     if (!allowed.includes(toStatus)) {
-      toast.error(`${STATUS_CONFIG[fromStatus]?.label} → ${STATUS_CONFIG[toStatus]?.label} allowed nahi hai`);
+      toast.error(`${STATUS_CONFIG[fromStatus]?.label} → ${STATUS_CONFIG[toStatus]?.label} is not allowed`);
       return;
     }
 
@@ -170,7 +170,7 @@ export default function PipelinePage() {
         <div>
           <h1 className="font-display text-2xl font-semibold text-forest-DEFAULT">Pipeline</h1>
           <p className="text-xs text-gray-500 mt-0.5">
-            Converted → Delivered → Cancelled — drag karo status change karne ke liye
+            Converted → Delivered → Cancelled — Drag cards to update lead status
           </p>
         </div>
         <button className="btn btn-amber text-xs" onClick={() => router.push('/leads?action=new')}>
@@ -232,7 +232,7 @@ export default function PipelinePage() {
             {moveModal.toStatus === 'converted' && (
               <>
                 <div className="bg-green-50 border border-green-100 rounded-lg px-3 py-2 text-xs text-green-700 font-medium">
-                  📦 Order details fill karo — sab required hain
+                  📦 Please fill in the order details — all fields are required
                 </div>
                 <div>
                   <label className="form-label">Product Name <span className="text-red-500">*</span></label>
@@ -282,7 +282,7 @@ export default function PipelinePage() {
             {moveModal.toStatus === 'delivered' && (
               <>
                 <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 text-xs text-emerald-700 font-medium">
-                  🚚 Delivery details add karo
+                  🚚 Please enter delivery details
                 </div>
                 <div>
                   <label className="form-label">Delivery Date <span className="text-red-500">*</span></label>
