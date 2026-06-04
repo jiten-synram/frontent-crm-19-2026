@@ -105,7 +105,7 @@ export default function StatusModal({ lead, onClose, onUpdated }: Props) {
         <StatusBadge status={lead.status} />
         {PIPELINE_ONLY.includes(lead.status) && (
           <span className="text-xs text-orange-600 ml-2">
-            ⚠ Pipeline status — sirf pipeline se change hoga
+            ⚠ Pipeline status — can only be changed from the Pipeline page
           </span>
         )}
       </div>
@@ -132,7 +132,7 @@ export default function StatusModal({ lead, onClose, onUpdated }: Props) {
         {/* Agar lead delivered/cancelled hai toh info show karo */}
         {PIPELINE_ONLY.includes(lead.status) && (
           <p className="text-xs text-gray-400 mt-2">
-            Delivered/Cancelled lead ka status change karna ho toh Pipeline page use karo.
+            To change the status of a Delivered or Cancelled lead, please use the Pipeline page.
           </p>
         )}
       </div>
@@ -144,7 +144,7 @@ export default function StatusModal({ lead, onClose, onUpdated }: Props) {
         {status === 'converted' && (
           <>
             <div className="bg-green-50 border border-green-100 rounded-lg px-3 py-2 text-xs text-green-700 font-medium mb-1">
-              📦 Order details fill karo — sab required hain
+              📦 Please fill in the order details — all fields are required
             </div>
 
             <div>
@@ -210,7 +210,7 @@ export default function StatusModal({ lead, onClose, onUpdated }: Props) {
           <label className="form-label">Remark</label>
           <textarea className="form-textarea" value={remark}
             onChange={(e) => setRemark(e.target.value)}
-            placeholder="Status change ka reason…" rows={2} />
+            placeholder="Reason for status change..." rows={2} />
         </div>
       </div>
     </Modal>
