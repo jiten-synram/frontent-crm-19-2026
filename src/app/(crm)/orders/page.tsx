@@ -222,6 +222,8 @@ const [dateTo,        setDateTo]        = useState('');
           const params   = new URLSearchParams({ format: 'excel' });
           if (statusFilter)  params.set('status',         statusFilter);
           if (paymentFilter) params.set('payment_status', paymentFilter);
+          if (dateFrom)      params.set('date_from',        dateFrom);  
+          if (dateTo)        params.set('date_to',          dateTo); 
           const res  = await fetch(`${BASE_URL}/orders/export?${params}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
@@ -249,6 +251,8 @@ const [dateTo,        setDateTo]        = useState('');
           const params   = new URLSearchParams({ format: 'csv' });
           if (statusFilter)  params.set('status',         statusFilter);
           if (paymentFilter) params.set('payment_status', paymentFilter);
+          if (dateFrom)      params.set('date_from',        dateFrom);  
+          if (dateTo)        params.set('date_to',          dateTo); 
           const res  = await fetch(`${BASE_URL}/orders/export?${params}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
