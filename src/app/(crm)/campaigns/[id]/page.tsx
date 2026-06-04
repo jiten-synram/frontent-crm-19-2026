@@ -101,7 +101,7 @@ export default function CampaignDetailPage() {
                 <div className="text-3xl mb-2">👥</div>
                 <p className="text-xs text-gray-500">No leads yet for this campaign</p>
                 <p className="text-xs text-gray-400 mt-1">
-                  Make.com se leads aane pe yahan dikhenge
+                  Leads received through Make.com will appear here automatically
                 </p>
               </div>
             ) : (
