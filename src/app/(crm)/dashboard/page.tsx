@@ -40,7 +40,8 @@ export default function DashboardPage() {
       <div className="flex items-start justify-between mb-5">
         <div>
           <h1 className="font-display text-2xl font-semibold text-forest-DEFAULT">
-            Good {new Date().getHours() < 12 ? 'morning' : 'afternoon'}, {user?.name?.split(' ')[0]} 👋
+            Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 16 ? 'Afternoon' : new Date().getHours() < 19 ? 'Evening' : 'Night'
+  }, {user?.name?.split(' ')[0]} 👋
           </h1>
           <p className="text-xs text-gray-500 mt-0.5">
             {new Date().toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}
