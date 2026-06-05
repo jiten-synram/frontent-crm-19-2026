@@ -164,7 +164,7 @@ export default function ReportsPage() {
               <div className="overflow-x-auto">
                 <table className="data-table">
                   <thead>
-                    <tr><th>Agent</th><th>Leads</th><th>New</th><th>In Process</th><th>Follow-up</th><th>CNR</th><th>Dead</th><th>Converted</th><th>Delivered</th><th>Revenue</th><th>Conv. Rate</th><th>Lost</th></tr>
+                    <tr><th>Agent</th><th>Leads</th><th>New</th><th>In Process</th><th>Follow-up</th><th>CNR</th><th>Dead</th><th>Converted</th><th>Delivered</th><th>Reorder Delivered</th><th>Revenue</th><th>Conv. Rate</th><th>Lost</th></tr>
                   </thead>
                   <tbody>
                     {(data?.performance || []).map((u: any) => (
@@ -186,6 +186,7 @@ export default function ReportsPage() {
                         <td>{u.dead || 0}</td>
                         <td>{u.converted}</td>
                         <td>{u.delivered}</td>
+                        <td>{u.reorder_count}</td>
                         <td className="font-bold text-forest-DEFAULT">{fmtINR(u.revenue)}</td>
                         <td>
                           <div className="flex items-center gap-2">
@@ -195,7 +196,7 @@ export default function ReportsPage() {
                             <span className="text-xs text-gray-600">{u.conversion_rate || 0}%</span>
                           </div>
                         </td>
-                        <td>{u.closed_lost}</td>
+                        <td>{u.cancelled}</td>
                       </tr>
                     ))}
                   </tbody>
