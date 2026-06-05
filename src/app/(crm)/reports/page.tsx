@@ -88,7 +88,8 @@ export default function ReportsPage() {
     if (filters.start_date)  p.start_date  = filters.start_date;
     if (filters.end_date)    p.end_date    = filters.end_date;
     if (filters.assigned_to) p.assigned_to = filters.assigned_to;
-    reportsAPI.export(p);
+    reportsAPI.exportCombined(p);
+    
   }}
 >↓ Excel</button>
 
@@ -99,7 +100,7 @@ export default function ReportsPage() {
     if (filters.start_date)  p.start_date  = filters.start_date;
     if (filters.end_date)    p.end_date    = filters.end_date;
     if (filters.assigned_to) p.assigned_to = filters.assigned_to;
-    reportsAPI.export(p);
+    reportsAPI.exportCombined(p);
   }}
 >↓ CSV</button> 
         </div>
