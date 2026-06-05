@@ -169,28 +169,49 @@ export const reportsAPI = {
   //   const qs = new URLSearchParams(params as Record<string, string>).toString();
   //   window.open(`${BASE_URL}/reports/export?${qs}&token=${token}`, '_blank');
   // },
-  export: async (params: Record<string, unknown>) => {
-    const token = localStorage.getItem('access_token');
-    const cleanParams: Record<string, string> = {};
-    Object.entries(params).forEach(([k, v]) => {
-      if (v !== '' && v !== null && v !== undefined) {
-        cleanParams[k] = String(v);
-      }
-    });
-    const qs = new URLSearchParams(cleanParams).toString();
-    const res = await fetch(`${BASE_URL}/reports/export?${qs}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    if (!res.ok) throw new Error('Export failed');
-    const blob = await res.blob();
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    const ext  = cleanParams.format === 'csv' ? 'csv' : 'xlsx';
-    a.href     = url;
-    a.download = `yogveda-report-${Date.now()}.${ext}`;
-    a.click();
-    URL.revokeObjectURL(url);
-  },
+  // export: async (params: Record<string, unknown>) => {
+  //   const token = localStorage.getItem('access_token');
+  //   const cleanParams: Record<string, string> = {};
+  //   Object.entries(params).forEach(([k, v]) => {
+  //     if (v !== '' && v !== null && v !== undefined) {
+  //       cleanParams[k] = String(v);
+  //     }
+  //   });
+  //   const qs = new URLSearchParams(cleanParams).toString();
+  //   const res = await fetch(`${BASE_URL}/reports/export?${qs}`, {
+  //     headers: { Authorization: `Bearer ${token}` }
+  //   });
+  //   if (!res.ok) throw new Error('Export failed');
+  //   const blob = await res.blob();
+  //   const url  = URL.createObjectURL(blob);
+  //   const a    = document.createElement('a');
+  //   const ext  = cleanParams.format === 'csv' ? 'csv' : 'xlsx';
+  //   a.href     = url;
+  //   a.download = `yogveda-report-${Date.now()}.${ext}`;
+  //   a.click();
+  //   URL.revokeObjectURL(url);
+  // },
+  
+  // api.ts — reportsAPI mein add karo
+    exportCombined: (params: Record<string, string>) => {
+      const token    = localStorage.getItem('access_token');
+      const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      const query    = new URLSearchParams(params).toString();
+      const a        = document.createElement('a');
+      a.href         = `${BASE_URL}/reports/export-combined?${query}`;
+      // fetch with auth header
+      fetch(`${BASE_URL}/reports/export-combined?${query}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then(r => r.blob())
+        .then(blob => {
+          const url  = URL.createObjectURL(blob);
+          a.href     = url;
+          a.download = `combined-report-${Date.now()}.${params.format === 'csv' ? 'csv' : 'xlsx'}`;
+          a.click();
+          URL.revokeObjectURL(url);
+        });
+    },
 };
 
 // ── TEAM ──────────────────────────────────────────────────────────────
