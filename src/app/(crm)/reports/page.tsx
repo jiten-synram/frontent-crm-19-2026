@@ -7,7 +7,7 @@ import { Bar } from 'react-chartjs-2';
 import { reportsAPI } from '@/lib/api';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
-import { Avatar, Empty, Skeleton, Spinner } from '@/components/ui';
+import { Avatar, Empty, Skeleton, Spinner, Modal } from '@/components/ui';
 import { fmtINR, fmtDate, avatarColor } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
