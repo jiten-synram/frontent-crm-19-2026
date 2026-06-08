@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Tooltip, Legend } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 import { reportsAPI } from '@/lib/api';
+import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { Avatar, Empty, Skeleton, Spinner } from '@/components/ui';
 import { fmtINR, fmtDate, avatarColor } from '@/lib/utils';
