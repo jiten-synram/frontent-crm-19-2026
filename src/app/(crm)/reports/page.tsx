@@ -18,7 +18,8 @@ type Tab = 'revenue' | 'team' | 'campaigns' | 'incentives';
 export default function ReportsPage() {
   const { isAdmin } = useAuthStore();
   // ✅ Fix 1 — Sales user ke liye 'incentives' se shuru karo
-  const [tab, setTab]     = useState<Tab>(isAdmin() ? 'revenue' : 'incentives');
+  // const [tab, setTab]     = useState<Tab>(isAdmin() ? 'revenue' : 'incentives');
+  const [tab, setTab] = useState<Tab>('revenue');
   const [data, setData]   = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({ start_date:'', end_date:'', assigned_to:'' });
