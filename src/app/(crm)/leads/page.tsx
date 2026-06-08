@@ -9,7 +9,7 @@ import { useAuthStore } from '@/store/auth';
 import { StatusBadge, SourceBadge, Avatar, Pagination, Empty, Skeleton, SearchInput } from '@/components/ui';
 import NewLeadModal from '@/components/leads/NewLeadModal';
 import StatusModal  from '@/components/leads/StatusModal';
-import { fmtINR, fmtDate, STATUS_CONFIG, SOURCE_CONFIG, ALL_STATUSES, SOURCES, avatarColor } from '@/lib/utils';
+import { fmtINR, fmtDate, fmtDateTime, STATUS_CONFIG, SOURCE_CONFIG, ALL_STATUSES, SOURCES, avatarColor } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import type { Lead, LeadStatus, LeadSource } from '@/types';
 
