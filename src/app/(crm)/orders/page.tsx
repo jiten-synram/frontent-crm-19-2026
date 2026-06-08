@@ -4,6 +4,7 @@
 // Status filters: pending | dispatched | delivered | cancelled
 
 import { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ordersAPI } from '@/lib/api';
 import { Avatar, Pagination, Empty, Skeleton, Modal, Spinner } from '@/components/ui';
@@ -34,6 +35,7 @@ const PAYMENT_COLORS: Record<string, string> = {
 };
 
 export default function OrdersPage() {
+  const searchParams = useSearchParams();
   const [orders,       setOrders]       = useState<Order[]>([]);
   const [total,        setTotal]        = useState(0);
   const [page,         setPage]         = useState(1);
@@ -41,7 +43,7 @@ export default function OrdersPage() {
   // const [statusFilter, setStatusFilter] = useState('');
   const [statusFilter,  setStatusFilter]  = useState('');
 const [paymentFilter, setPaymentFilter] = useState('');
-  const [repeatFilter,  setRepeatFilter]  = useState(false); // ✅ NEW
+  const [repeatFilter,  setRepeatFilter]  = useState(searchParams.get('repeat') === 'true'); // ✅ NEW
 const [exporting,     setExporting]     = useState(false);
   const [dateFrom,      setDateFrom]      = useState('');
 const [dateTo,        setDateTo]        = useState('');
@@ -75,6 +77,12 @@ const [dateTo,        setDateTo]        = useState('');
     finally { setLoading(false); }
   }, [page, statusFilter, paymentFilter, dateFrom, dateTo, repeatFilter]);
 
+  useEffect(() => {
+    if (searchParams.get('repeat') === 'true') {
+      setRepeatFilter(true);
+    }
+  }, [searchParams]);
+  
   useEffect(() => { load(); }, [load]);
 
   const openUpdate = (order: Order) => {
