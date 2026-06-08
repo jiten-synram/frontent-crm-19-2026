@@ -41,6 +41,7 @@ export default function OrdersPage() {
   // const [statusFilter, setStatusFilter] = useState('');
   const [statusFilter,  setStatusFilter]  = useState('');
 const [paymentFilter, setPaymentFilter] = useState('');
+  const [repeatFilter,  setRepeatFilter]  = useState(false); // ✅ NEW
 const [exporting,     setExporting]     = useState(false);
   const [dateFrom,      setDateFrom]      = useState('');
 const [dateTo,        setDateTo]        = useState('');
@@ -65,12 +66,14 @@ const [dateTo,        setDateTo]        = useState('');
         payment_status: paymentFilter || undefined,
         date_from:      dateFrom      || undefined, 
         date_to:        dateTo        || undefined,
+        // ✅ Pass is_repeat only when toggled on
+        is_repeat:      repeatFilter  ? 'true' : undefined,
       });
       setOrders(res?.orders || []);
       setTotal(res?.total || 0);
     } catch { toast.error('Failed to load orders'); }
     finally { setLoading(false); }
-  }, [page, statusFilter, paymentFilter, dateFrom, dateTo]);
+  }, [page, statusFilter, paymentFilter, dateFrom, dateTo, repeatFilter]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -178,6 +181,8 @@ const [dateTo,        setDateTo]        = useState('');
       {f.label}
     </button>
   ))}
+
+  {repeatFilter && <span className="ml-1.5 bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-semibold text-[10px]">⟳ Repeat only</span>}
 
   {/* ✅ Date range filter */}
 <span className="text-gray-200 mx-1">|</span>
