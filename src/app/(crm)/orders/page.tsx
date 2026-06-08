@@ -182,7 +182,7 @@ const [dateTo,        setDateTo]        = useState('');
     </button>
   ))}
 
-  {repeatFilter && <span className="ml-1.5 bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-semibold text-[10px]">⟳ Repeat only</span>}
+  <span className="ml-1.5 bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-semibold text-[10px]">⟳ Repeat only</span>
 
   {/* ✅ Date range filter */}
 <span className="text-gray-200 mx-1">|</span>
