@@ -39,6 +39,7 @@ const LEADS_PAGE_STATUSES: LeadStatus[] = [
   'cnr',
   'converted',
   'dead',
+  'cancelled',
 ];
 
 // ── Remark Cell — inline auto-save input ─────────────────────────
@@ -158,7 +159,7 @@ export default function LeadsPage() {
       } else {
         // Delivered aur cancelled hide karo by default
         // Backend ko exclude_statuses parameter bhejo
-        params.exclude_statuses = 'delivered,cancelled';
+        params.exclude_statuses = 'delivered';
       }
 
       const res: any = await leadsAPI.list(params);
