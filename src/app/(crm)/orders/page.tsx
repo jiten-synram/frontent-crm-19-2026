@@ -182,18 +182,36 @@ const [dateTo,        setDateTo]        = useState('');
     </button>
   ))}
 
-  {repeatFilter && (
+  {/* Repeat Order Filter */}
+<button
+  onClick={() => {
+    setRepeatFilter(true);
+    setPage(1);
+  }}
+  className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all
+    ${
+      repeatFilter
+        ? 'border-amber-500 bg-amber-50 text-amber-700'
+        : 'border-gray-200 text-gray-600 hover:border-gray-300'
+    }`}
+>
+  ⟳ Repeat Orders
+</button>
+
+{/* Repeat Active Badge + Clear */}
+{repeatFilter && (
   <>
     <span className="bg-amber-50 text-amber-700 px-2 py-1 rounded-full text-[10px] font-semibold">
       ⟳ Repeat Only
     </span>
 
     <button
+      type="button"
       onClick={() => {
         setRepeatFilter(false);
         setPage(1);
       }}
-      className="text-xs text-red-500 hover:text-red-700"
+      className="text-xs px-2 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50"
     >
       ✕ Clear
     </button>
