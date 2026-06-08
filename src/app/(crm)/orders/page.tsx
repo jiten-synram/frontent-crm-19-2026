@@ -182,20 +182,23 @@ const [dateTo,        setDateTo]        = useState('');
     </button>
   ))}
 
-  <button
-  onClick={() => {
-    setRepeatFilter(!repeatFilter);
-    setPage(1);
-  }}
-  className={`text-xs px-3 py-1.5 rounded-full border-2 font-semibold transition-all
-    ${
-      repeatFilter
-        ? 'border-amber-500 bg-amber-50 text-amber-700'
-        : 'border-gray-200 text-gray-500 hover:border-amber-300 hover:text-amber-600'
-    }`}
->
-  ⟳ Repeat Orders {repeatFilter ? '✓' : ''}
-</button>
+  {repeatFilter && (
+  <>
+    <span className="bg-amber-50 text-amber-700 px-2 py-1 rounded-full text-[10px] font-semibold">
+      ⟳ Repeat Only
+    </span>
+
+    <button
+      onClick={() => {
+        setRepeatFilter(false);
+        setPage(1);
+      }}
+      className="text-xs text-red-500 hover:text-red-700"
+    >
+      ✕ Clear
+    </button>
+  </>
+)}
 
   {/* ✅ Date range filter */}
 <span className="text-gray-200 mx-1">|</span>
