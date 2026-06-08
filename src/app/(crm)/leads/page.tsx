@@ -506,7 +506,7 @@ export default function LeadsPage() {
                     </td>
 
                     <td className="text-xs text-gray-400">
-                      {lead.created_at ? fmtDate(lead.created_at) : '—'}
+                      {lead.created_at ? fmtDateTime(lead.created_at) : '—'}
                     </td>
 
                     <td onClick={(e) => e.stopPropagation()}>
