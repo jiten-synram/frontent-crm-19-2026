@@ -72,7 +72,7 @@ export default function DashboardPage() {
         <StatCard label="Total Leads"    value={cards.total || 0}       icon="👥" color="green"  trend={12} onClick={() => router.push('/leads')} />
         <StatCard label="Revenue"        value={fmtCurrency(cards.total_revenue)} icon="💰" color="amber"  trend={22} onClick={() => router.push('/reports')} />
         <StatCard label="Delivered"      value={cards.delivered || 0}   icon="✅" color="green"  trend={8}  onClick={() => router.push('/leads?status=delivered')} />
-        <StatCard label="Repeat Orders"  value={cards.repeat_orders || 0} icon="🔄" color="amber" trend={31} onClick={() => router.push('/customers')} />
+        <StatCard label="Repeat Orders"  value={cards.repeat_orders || 0} icon="🔄" color="amber" trend={31} onClick={() => router.push('/orders?repeat=true')} />
         <StatCard label="In Process"     value={cards.in_process || 0}  icon="⚙️" color="blue"   trend={5}  onClick={() => router.push('/leads?status=in_process')} />
         <StatCard label="Follow-ups"     value={cards.follow_up || 0}   icon="📅" color="purple" sub={overdue > 0 ? `${overdue} overdue` : undefined} onClick={() => router.push('/follow-ups')} />
         <StatCard label="Converted"      value={cards.converted || 0}   icon="🎯" color="green"  trend={18} onClick={() => router.push('/leads?status=converted')} />
