@@ -49,7 +49,6 @@ const NAV_SECTIONS = [
     items: [
       { href: '/leads',     label: 'Leads',      icon: 'leads' },
       { href: '/pipeline',  label: 'Pipeline',   icon: 'pipeline' },
-      { href: '/campaigns',  label: 'Campaigns',  icon: 'campaigns' },
       { href: '/customers', label: 'Customers',  icon: 'customers' },
       { href: '/follow-ups',label: 'Follow-ups', icon: 'followups' },
       { href: '/orders',    label: 'Orders',     icon: 'orders' },
@@ -59,6 +58,7 @@ const NAV_SECTIONS = [
     title: 'Management',
     items: [
       { href: '/reports',      label: 'Reports',      icon: 'reports' },
+      { href: '/campaigns',    label: 'Campaigns',    icon: 'campaigns',    adminOnly: true },
       { href: '/team',         label: 'Team',         icon: 'team',         adminOnly: true },
       { href: '/integrations', label: 'Integrations', icon: 'integrations', adminOnly: true },
       { href: '/settings',     label: 'Settings',     icon: 'settings' },
