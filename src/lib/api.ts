@@ -242,5 +242,10 @@ export const integrationsAPI = {
     api.post('/integrations/settings', { settings }),
 };
 
+export const notificationsAPI = {
+  list:    ()   => api.get('/notifications'),
+  read:    (id: number) => api.patch(`/notifications/${id}/read`),
+  readAll: ()   => api.patch('/notifications/read-all'),
+};
 
 export default api;
