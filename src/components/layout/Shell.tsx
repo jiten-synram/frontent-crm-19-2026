@@ -5,9 +5,10 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/store/auth';
-import { followUpsAPI } from '@/lib/api';
+import { followUpsAPI, notificationsAPI  } from '@/lib/api';
 import { Avatar } from '@/components/ui';
-import { cn } from '@/lib/utils';
+import { cn, fmtDate } from '@/lib/utils';
+
 
 // ── Icons ─────────────────────────────────────────────────────────
 const Icon = ({ d, size = 16 }: { d: string; size?: number }) => (
@@ -183,6 +184,153 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
+// ── Notification Bell ─────────────────────────────────────────────
+function NotificationBell() {
+  const router = useRouter();
+  const [open,          setOpen]          = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unread,        setUnread]        = useState(0);
+  const ref = React.useRef<HTMLDivElement>(null);
+ 
+  const load = async () => {
+    try {
+      const res: any = await notificationsAPI.list();
+      setNotifications(res?.notifications || []);
+      setUnread(res?.unread || 0);
+    } catch {}
+  };
+ 
+  // Polling — har 30 seconds mein check karo
+  useEffect(() => {
+    load();
+    const interval = setInterval(load, 30_000);
+    return () => clearInterval(interval);
+  }, []);
+ 
+  // Outside click se close karo
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+ 
+  const handleRead = async (n: any) => {
+    if (!n.is_read) {
+      await notificationsAPI.read(n.id);
+      setUnread(u => Math.max(0, u - 1));
+      setNotifications(ns => ns.map(x => x.id === n.id ? { ...x, is_read: 1 } : x));
+    }
+    if (n.lead_id) {
+      router.push(`/leads/${n.lead_id}`);
+      setOpen(false);
+    }
+  };
+ 
+  const handleReadAll = async () => {
+    await notificationsAPI.readAll();
+    setUnread(0);
+    setNotifications(ns => ns.map(n => ({ ...n, is_read: 1 })));
+  };
+ 
+  return (
+    <div className="relative" ref={ref}>
+      {/* Bell button */}
+      <button
+        className="btn btn-ghost btn-icon relative"
+        onClick={() => { setOpen(o => !o); if (!open) load(); }}
+      >
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" />
+        </svg>
+        {unread > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 bg-red-500
+            text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1">
+            {unread > 99 ? '99+' : unread}
+          </span>
+        )}
+      </button>
+ 
+      {/* Dropdown */}
+      {open && (
+        <div className="absolute right-0 top-10 w-80 bg-white rounded-xl shadow-modal
+          border border-gray-100 z-50 overflow-hidden">
+ 
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+            <span className="text-sm font-semibold text-forest-DEFAULT">
+              Notifications
+              {unread > 0 && <span className="text-red-500 ml-1">({unread})</span>}
+            </span>
+            {unread > 0 && (
+              <button
+                className="text-xs text-gray-400 hover:text-forest-DEFAULT transition-colors"
+                onClick={handleReadAll}
+              >
+                Mark all read
+              </button>
+            )}
+          </div>
+ 
+          {/* List */}
+          <div className="max-h-80 overflow-y-auto">
+            {notifications.length === 0 ? (
+              <div className="py-10 text-center text-xs text-gray-400">
+                🔔 Notification not found
+              </div>
+            ) : (
+              notifications.map((n) => (
+                <div
+                  key={n.id}
+                  onClick={() => handleRead(n)}
+                  className={`px-4 py-3 border-b border-gray-50 cursor-pointer
+                    hover:bg-gray-50 transition-colors
+                    ${!n.is_read ? 'bg-blue-50/40' : ''}`}
+                >
+                  <div className="flex items-start gap-2.5">
+                    {/* Icon */}
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center
+                      flex-shrink-0 text-sm
+                      ${n.type === 'lead_assigned' ? 'bg-green-100' : 'bg-blue-100'}`}>
+                      {n.type === 'lead_assigned' ? '👤' : '📋'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-xs ${!n.is_read ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>
+                        {n.title}
+                      </div>
+                      {n.message && (
+                        <div className="text-[10px] text-gray-500 mt-0.5 truncate">{n.message}</div>
+                      )}
+                      <div className="text-[10px] text-gray-400 mt-1">{fmtDate(n.created_at)}</div>
+                    </div>
+                    {/* Unread dot */}
+                    {!n.is_read && (
+                      <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-1.5" />
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+ 
+          {/* Footer */}
+          {notifications.length > 0 && (
+            <div className="px-4 py-2.5 border-t border-gray-100 text-center">
+              <button
+                className="text-xs text-gray-400 hover:text-forest-DEFAULT transition-colors"
+                onClick={() => { setOpen(false); router.push('/leads'); }}
+              >
+                View all leads →
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Header ────────────────────────────────────────────────────────
 function Header({ fuCount, onLogout }: { fuCount: number; onLogout: () => void }) {
   const { user } = useAuthStore();
@@ -215,7 +363,7 @@ function Header({ fuCount, onLogout }: { fuCount: number; onLogout: () => void }
 
       <div className="ml-auto flex items-center gap-2">
         {/* Notifications */}
-        <div className="relative">
+        {/* <div className="relative">
           <button
             className="btn btn-ghost btn-icon relative"
             onClick={() => { setShowNotif(!showNotif); }}
@@ -242,7 +390,10 @@ function Header({ fuCount, onLogout }: { fuCount: number; onLogout: () => void }
               )}
             </div>
           )}
-        </div>
+        </div> */}
+        
+        {/* ✅ Notification Bell — real notifications */}
+        <NotificationBell />
 
         {/* New Lead */}
         <Link href="/leads?action=new">
