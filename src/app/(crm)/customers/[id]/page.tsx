@@ -369,7 +369,13 @@ export default function CustomerDetailPage() {
                           :                             'bg-amber-100  text-amber-700'}`}>
                           {p.status}
                         </span>
-                         
+                        {p.status !== 'cancelled' && p.order_id && (
+                          <button
+                            className="text-[9.5px] text-red-400 hover:text-red-600 font-medium border border-red-100 hover:border-red-300 hover:bg-red-50 px-2 py-0.5 rounded-md transition-all"
+                            onClick={() => { setCancelOrder(p); setCancelDate(new Date().toISOString().split('T')[0]); setCancelRemark('');     }}  >
+                            Cancel Order
+                          </button>
+                        )} 
                       </div>
                     </div>
                   </div>
