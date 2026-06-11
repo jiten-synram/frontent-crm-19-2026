@@ -56,6 +56,12 @@ const [dateTo,        setDateTo]        = useState('');
   });
   const [updateSaving, setUpdateSaving] = useState(false);
 
+  const [editModal,  setEditModal]  = useState<Order | null>(null);
+const [editForm,   setEditForm]   = useState({
+  product_name: '', amount: '', payment_status: '' as 'cod'|'prepaid'|'', shipping_address: ''
+});
+const [editSaving, setEditSaving] = useState(false);
+
   const LIMIT = 25;
 
   const load = useCallback(async () => {
@@ -130,6 +136,33 @@ const [dateTo,        setDateTo]        = useState('');
     } catch (e: any) { toast.error(e?.message || 'Failed'); }
     finally { setUpdateSaving(false); }
   };
+
+  const openEdit = (order: Order) => {
+  setEditModal(order);
+  setEditForm({
+    product_name:     order.product_name || '',
+    amount:           String(order.amount || ''),
+    payment_status:   (order.payment_status as any) || '',
+    shipping_address: order.shipping_address || '',
+  });
+};
+
+const saveEdit = async () => {
+  if (!editModal) return;
+  setEditSaving(true);
+  try {
+    await ordersAPI.editOrder(editModal.id, {
+      product_name:     editForm.product_name     || undefined,
+      amount:           editForm.amount           ? Number(editForm.amount) : undefined,
+      payment_status:   editForm.payment_status   || undefined,
+      shipping_address: editForm.shipping_address || undefined,
+    });
+    toast.success('Order updated!');
+    setEditModal(null);
+    await load();
+  } catch (e: any) { toast.error(e?.message || 'Failed'); }
+  finally { setEditSaving(false); }
+};
 
   const pages = Math.ceil(total / LIMIT);
 
@@ -384,6 +417,12 @@ const [dateTo,        setDateTo]        = useState('');
                       </span>
                     </td>
                     <td>
+                      {['pending', 'dispatched', 'delivered'].includes(o.status) && (
+                    <button className="btn btn-ghost btn-xs"
+                      onClick={() => openEdit(o)}>
+                      ✏️ Edit
+                    </button>
+                    )}
                       {/* Update button — sirf pending aur dispatched par */}
                       {['pending', 'dispatched'].includes(o.status) && (
                         <button className="btn btn-outline btn-xs" onClick={() => openUpdate(o)}>
@@ -578,6 +617,85 @@ const [dateTo,        setDateTo]        = useState('');
                 </div>
               </>
             )}
+          </div>
+        </Modal>
+      )}
+
+
+      {/* Edit Order Modal */}
+      {editModal && (
+        <Modal open
+          onClose={() => setEditModal(null)}
+          title={`Edit Order — ${editModal.product_name}`}
+          footer={
+            <>
+              <button className="btn btn-outline"
+                onClick={() => setEditModal(null)} disabled={editSaving}>
+                Cancel
+              </button>
+              <button className="btn btn-amber"
+                onClick={saveEdit} disabled={editSaving}>
+                {editSaving ? <Spinner size={14} /> : 'Save Changes'}
+              </button>
+            </>
+          }
+        >
+          {/* Warning for delivered orders */}
+          {editModal.status === 'delivered' && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4 text-xs text-amber-700">
+              {/* ⚠️ Delivered order hai — amount change hone par revenue aur incentive
+              automatically recalculate hoga */}
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <div>
+              <label className="form-label">Product Name</label>
+              <input className="form-input"
+                value={editForm.product_name}
+                onChange={(e) => setEditForm(f => ({ ...f, product_name: e.target.value }))}
+                placeholder="Product name" />
+            </div>
+
+            <div>
+              <label className="form-label">Amount (₹)</label>
+              <input type="number" className="form-input"
+                value={editForm.amount}
+                onChange={(e) => setEditForm(f => ({ ...f, amount: e.target.value }))}
+                placeholder="Order amount" />
+              {editModal.status === 'delivered' && editForm.amount &&
+                Number(editForm.amount) !== Number(editModal.amount) && (
+                <p className="text-xs text-amber-600 mt-1">
+                  ₹{editModal.amount} → ₹{editForm.amount}
+                  {' '}(diff: {Number(editForm.amount) > Number(editModal.amount) ? '+' : ''}
+                  {Number(editForm.amount) - Number(editModal.amount)})
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="form-label">Payment Status</label>
+              <div className="flex gap-2 mt-1">
+                {(['cod', 'prepaid'] as const).map((pm) => (
+                  <button key={pm} type="button"
+                    onClick={() => setEditForm(f => ({ ...f, payment_status: pm }))}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-bold border-2 transition-all uppercase
+                      ${editForm.payment_status === pm
+                        ? pm === 'cod'
+                          ? 'border-amber-500 bg-amber-50 text-amber-700'
+                          : 'border-green-500 bg-green-50 text-green-700'
+                        : 'border-gray-200 text-gray-400'}`}>
+                    {pm === 'cod' ? '💵 COD' : '💳 Prepaid'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              {/* <label className="form-label">Shipping Address</label>
+              <textarea className="form-textarea" rows={2} value={editForm.shipping_address} onChange={(e) => setEditForm(f => ({ ...f, shipping_address: e.target.value }))} placeholder="Delivery address" /> */}
+              <input type="hidden" value={editForm.shipping_address} onChange={(e) => setEditForm(f => ({ ...f, shipping_address: e.target.value })) } />
+            </div>
           </div>
         </Modal>
       )}
