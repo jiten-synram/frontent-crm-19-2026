@@ -145,6 +145,7 @@ export const ordersAPI = {
     api.get('/orders', { params }),
   updateTracking: (id: number, data: Record<string, unknown>) =>
     api.patch(`/orders/${id}/tracking`, data),
+  editOrder:      (id: number, data: any) => api.patch(`/orders/${id}/edit`, data),
 };
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────
